@@ -20,6 +20,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    print(f"Validation Error: {exc}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body},
+    )
+
 # ===== 資料庫初始化 =====
 def init_db():
     conn = sqlite3.connect('game_records.db')
@@ -378,13 +389,12 @@ async def call_numbers(request: CallNumbersRequest):
     if not game:
         raise HTTPException(404, "遊戲不存在")
     
+    numbers = request.numbers
     print(f"Call Request: player={request.player_id}, current={game.current_player_index}, numbers={numbers}")
     
     if request.player_id != game.current_player_index:
         print(f"Turn Mismatch: req={request.player_id} != curr={game.current_player_index}")
         raise HTTPException(400, "不是你的回合")
-    
-    numbers = request.numbers
     
     if len(numbers) < 1 or len(numbers) > 3:
         raise HTTPException(400, "必須喊 1-3 個號碼")
@@ -496,6 +506,7 @@ async def get_status(game_id: str):
     game_over = len(alive_players) <= 1
     
     return {
+        "game_id": game.game_id,
         "current_round": game.current_round,
         "current_player": game.current_player_index,
         "number_range": game.number_range,

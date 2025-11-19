@@ -34,22 +34,32 @@ export const gameApi = {
   },
 
   async pass(request: PassRequest): Promise<PassResponse> {
+    console.log("Pass Request:", request);
     const response = await fetch(`${API_BASE_URL}/game/pass`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
-    if (!response.ok) throw new Error("Failed to pass");
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Pass Error:", errorData);
+      throw new Error("Failed to pass");
+    }
     return response.json();
   },
 
   async reverse(request: ReverseRequest): Promise<ReverseResponse> {
+    console.log("Reverse Request:", request);
     const response = await fetch(`${API_BASE_URL}/game/reverse`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
-    if (!response.ok) throw new Error("Failed to reverse");
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Reverse Error:", errorData);
+      throw new Error("Failed to reverse");
+    }
     return response.json();
   },
 
