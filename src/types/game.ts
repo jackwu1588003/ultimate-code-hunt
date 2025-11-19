@@ -2,6 +2,7 @@ export interface Player {
   id: number;
   name: string;
   is_alive: boolean;
+  is_ai: boolean;
   pass_available: boolean;
   reverse_available: boolean;
 }
@@ -18,8 +19,14 @@ export interface GameState {
   winner?: number;
 }
 
+export interface PlayerConfig {
+  name: string;
+  is_ai: boolean;
+  difficulty?: "easy" | "medium" | "hard";
+}
+
 export interface StartGameRequest {
-  players: string[];
+  players: PlayerConfig[];
 }
 
 export interface StartGameResponse {
@@ -27,6 +34,10 @@ export interface StartGameResponse {
   current_round: number;
   number_range: [number, number];
   players: Player[];
+  called_numbers: number[];
+  direction: number;
+  game_over: boolean;
+  winner?: number;
 }
 
 export interface CallNumberRequest {

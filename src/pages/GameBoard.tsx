@@ -30,10 +30,68 @@ const GameBoard = () => {
 
   if (!gameState) return null;
 
+  useEffect(() => {
+    if (!gameState) return;
+
+    const currentPlayer = gameState.players.find((p) => p.id === gameState.current_player);
+
+    if (currentPlayer?.is_ai && !gameState.game_over) {
+      const performAiAction = async () => {
+        setIsProcessing(true);
+        // Simulate thinking time
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        try {
+          const response = await gameApi.aiAction(gameState.game_id);
+
+          // Handle response similar to human action
+          if ('hit_secret' in response && response.hit_secret) {
+            setIsExploding(true);
+            toast.error(`💥 踩雷了！${currentPlayer.name} 被淘汰！`, {
+              duration: 3000,
+            });
+            setTimeout(() => setIsExploding(false), 600);
+          } else if ('action' in response && response.action === 'pass') { // Note: Backend response might need normalization or check specific fields
+            toast.success(`${currentPlayer.name} 使用了 Pass！`);
+          } else if ('new_direction' in response) {
+            toast.success(`${currentPlayer.name} 使用了迴轉！`);
+          } else {
+            const callResponse = response as any; // Type assertion if needed, or better check
+            if (callResponse.called_numbers) {
+              const numbers = callResponse.called_numbers.filter((n: number) => !gameState.called_numbers.includes(n));
+              // This logic is a bit complex because response returns ALL called numbers. 
+              // Better to just say AI acted.
+              toast.success(`${currentPlayer.name} 完成了行動`);
+            }
+          }
+
+          const updatedState = await gameApi.getGameStatus(gameState.game_id);
+          setGameState(updatedState);
+
+          if (updatedState.game_over) {
+            setTimeout(() => {
+              navigate("/result", { state: { gameState: updatedState } });
+            }, 2000);
+          }
+        } catch (error) {
+          console.error("AI Action failed:", error);
+          toast.error("AI 發生錯誤");
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+
+      performAiAction();
+    }
+  }, [gameState?.current_player, gameState?.game_id]); // Only trigger when current player changes
+
+  if (!gameState) return null;
+
   const currentPlayer = gameState.players.find((p) => p.id === gameState.current_player);
   const alivePlayers = gameState.players.filter((p) => p.is_alive);
 
   const handleNumberSelect = (number: number) => {
+    if (currentPlayer?.is_ai) return; // Prevent interaction during AI turn
     if (selectedNumbers.includes(number)) {
       setSelectedNumbers(selectedNumbers.filter((n) => n !== number));
     } else if (selectedNumbers.length < 3) {
@@ -53,6 +111,7 @@ const GameBoard = () => {
   };
 
   const handleCallNumbers = async () => {
+    if (currentPlayer?.is_ai) return;
     if (selectedNumbers.length === 0) {
       toast.error("請至少選擇一個號碼！");
       return;
@@ -100,6 +159,7 @@ const GameBoard = () => {
   };
 
   const handlePass = async () => {
+    if (currentPlayer?.is_ai) return;
     if (!currentPlayer?.pass_available) {
       toast.error("本輪 Pass 已使用！");
       return;
@@ -125,6 +185,7 @@ const GameBoard = () => {
   };
 
   const handleReverse = async () => {
+    if (currentPlayer?.is_ai) return;
     if (!currentPlayer?.reverse_available) {
       toast.error("本輪迴轉已使用！");
       return;
@@ -173,7 +234,12 @@ const GameBoard = () => {
         {/* Current Player Card */}
         {currentPlayer && (
           <div className="animate-slide-up">
-            <PlayerCard player={currentPlayer} isActive={true} isLarge={true} />
+            <PlayerCard
+              player={currentPlayer}
+              isActive={true}
+              isLarge={true}
+              status={isProcessing && currentPlayer.is_ai ? "AI 思考中..." : undefined}
+            />
           </div>
         )}
 
@@ -195,7 +261,7 @@ const GameBoard = () => {
               calledNumbers={gameState.called_numbers}
               selectedNumbers={selectedNumbers}
               onNumberSelect={handleNumberSelect}
-              disabled={isProcessing}
+              disabled={isProcessing || currentPlayer?.is_ai}
             />
           </CardContent>
         </Card>
@@ -205,7 +271,7 @@ const GameBoard = () => {
           <Button
             size="lg"
             onClick={handleCallNumbers}
-            disabled={isProcessing || selectedNumbers.length === 0}
+            disabled={isProcessing || selectedNumbers.length === 0 || currentPlayer?.is_ai}
             className="text-lg py-6"
           >
             <ArrowRight className="w-5 h-5 mr-2" />
@@ -216,7 +282,7 @@ const GameBoard = () => {
             size="lg"
             variant="outline"
             onClick={handlePass}
-            disabled={isProcessing || !currentPlayer?.pass_available}
+            disabled={isProcessing || !currentPlayer?.pass_available || currentPlayer?.is_ai}
             className="text-lg py-6"
           >
             <CircleSlash className="w-5 h-5 mr-2" />
@@ -227,7 +293,7 @@ const GameBoard = () => {
             size="lg"
             variant="outline"
             onClick={handleReverse}
-            disabled={isProcessing || !currentPlayer?.reverse_available}
+            disabled={isProcessing || !currentPlayer?.reverse_available || currentPlayer?.is_ai}
             className="text-lg py-6"
           >
             <RotateCcw className="w-5 h-5 mr-2" />

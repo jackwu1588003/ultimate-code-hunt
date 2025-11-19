@@ -8,9 +8,10 @@ interface PlayerCardProps {
   player: Player;
   isActive: boolean;
   isLarge?: boolean;
+  status?: string;
 }
 
-export const PlayerCard = ({ player, isActive, isLarge = false }: PlayerCardProps) => {
+export const PlayerCard = ({ player, isActive, isLarge = false, status }: PlayerCardProps) => {
   return (
     <Card
       className={cn(
@@ -43,7 +44,7 @@ export const PlayerCard = ({ player, isActive, isLarge = false }: PlayerCardProp
             {player.name}
           </h3>
           <p className="text-sm text-muted-foreground">
-            {player.is_alive ? "存活中" : "已淘汰"}
+            {status || (player.is_alive ? "存活中" : "已淘汰")}
           </p>
         </div>
       </div>

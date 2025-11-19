@@ -58,4 +58,30 @@ export const gameApi = {
     if (!response.ok) throw new Error("Failed to get game status");
     return response.json();
   },
+
+  async aiAction(gameId: string): Promise<CallNumberResponse | PassResponse | ReverseResponse> {
+    const response = await fetch(`${API_BASE_URL}/game/ai-action?game_id=${gameId}`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to execute AI action");
+    return response.json();
+  },
+
+  async getLeaderboard(limit: number = 10) {
+    const response = await fetch(`${API_BASE_URL}/stats/leaderboard?limit=${limit}`);
+    if (!response.ok) throw new Error("Failed to get leaderboard");
+    return response.json();
+  },
+
+  async getPlayerStats(username: string) {
+    const response = await fetch(`${API_BASE_URL}/stats/player/${username}`);
+    if (!response.ok) throw new Error("Failed to get player stats");
+    return response.json();
+  },
+
+  async getGameDetails(gameUuid: string) {
+    const response = await fetch(`${API_BASE_URL}/stats/game/${gameUuid}`);
+    if (!response.ok) throw new Error("Failed to get game details");
+    return response.json();
+  },
 };

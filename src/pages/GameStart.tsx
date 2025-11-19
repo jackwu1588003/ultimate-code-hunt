@@ -4,45 +4,57 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Minus, Plus, Play } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Minus, Plus, Play, Bot, User } from "lucide-react";
 import { gameApi } from "@/services/gameApi";
 import { toast } from "sonner";
+import { PlayerConfig } from "@/types/game";
 
 const GameStart = () => {
   const navigate = useNavigate();
   const [playerCount, setPlayerCount] = useState(2);
-  const [playerNames, setPlayerNames] = useState<string[]>(["玩家 1", "玩家 2"]);
+  const [players, setPlayers] = useState<PlayerConfig[]>([
+    { name: "玩家 1", is_ai: false },
+    { name: "玩家 2", is_ai: false },
+  ]);
   const [isStarting, setIsStarting] = useState(false);
 
   const updatePlayerCount = (delta: number) => {
     const newCount = Math.max(2, Math.min(5, playerCount + delta));
     setPlayerCount(newCount);
 
-    const newNames = [...playerNames];
+    const newPlayers = [...players];
     if (delta > 0) {
-      newNames.push(`玩家 ${newCount}`);
+      newPlayers.push({ name: `玩家 ${newCount}`, is_ai: false });
     } else {
-      newNames.pop();
+      newPlayers.pop();
     }
-    setPlayerNames(newNames);
+    setPlayers(newPlayers);
   };
 
-  const updatePlayerName = (index: number, name: string) => {
-    const newNames = [...playerNames];
-    newNames[index] = name;
-    setPlayerNames(newNames);
+  const updatePlayer = (index: number, updates: Partial<PlayerConfig>) => {
+    const newPlayers = [...players];
+    newPlayers[index] = { ...newPlayers[index], ...updates };
+    setPlayers(newPlayers);
   };
 
   const startGame = async () => {
     // Validate all names are filled
-    if (playerNames.some((name) => !name.trim())) {
+    if (players.some((p) => !p.name.trim())) {
       toast.error("請填寫所有玩家名稱");
       return;
     }
 
     setIsStarting(true);
     try {
-      const response = await gameApi.startGame({ players: playerNames });
+      const response = await gameApi.startGame({ players });
       toast.success("遊戲開始！");
       navigate("/game", { state: { gameState: response } });
     } catch (error) {
@@ -90,36 +102,90 @@ const GameStart = () => {
             </div>
           </div>
 
-          {/* Player Names */}
+          {/* Player Configuration */}
           <div className="space-y-3">
-            <Label className="text-lg">玩家名稱</Label>
+            <Label className="text-lg">玩家設定</Label>
             <div className="grid gap-3">
-              {playerNames.map((name, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-muted-foreground w-16">
-                    玩家 {index + 1}
-                  </span>
-                  <Input
-                    value={name}
-                    onChange={(e) => updatePlayerName(index, e.target.value)}
-                    placeholder={`玩家 ${index + 1} 的名稱`}
-                    className="flex-1"
-                  />
+              {players.map((player, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 border rounded-lg bg-card/50"
+                >
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <span className="text-sm font-medium text-muted-foreground w-16">
+                      玩家 {index + 1}
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={player.is_ai}
+                        onCheckedChange={(checked) =>
+                          updatePlayer(index, {
+                            is_ai: checked,
+                            name: checked ? `AI-${index + 1}` : `玩家 ${index + 1}`,
+                            difficulty: checked ? "medium" : undefined,
+                          })
+                        }
+                      />
+                      {player.is_ai ? (
+                        <Bot className="w-4 h-4 text-primary" />
+                      ) : (
+                        <User className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 flex gap-2 w-full">
+                    <Input
+                      value={player.name}
+                      onChange={(e) => updatePlayer(index, { name: e.target.value })}
+                      placeholder={`玩家 ${index + 1} 的名稱`}
+                      className="flex-1"
+                    />
+
+                    {player.is_ai && (
+                      <Select
+                        value={player.difficulty}
+                        onValueChange={(value: "easy" | "medium" | "hard") =>
+                          updatePlayer(index, { difficulty: value })
+                        }
+                      >
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="難度" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="easy">簡單</SelectItem>
+                          <SelectItem value="medium">中等</SelectItem>
+                          <SelectItem value="hard">困難</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Start Button */}
-          <Button
-            size="lg"
-            className="w-full text-xl py-6 animate-pulse-glow"
-            onClick={startGame}
-            disabled={isStarting}
-          >
-            <Play className="w-6 h-6 mr-2" />
-            {isStarting ? "啟動中..." : "開始遊戲"}
-          </Button>
+          <div className="space-y-3">
+            <Button
+              size="lg"
+              className="w-full text-xl py-6 animate-pulse-glow"
+              onClick={startGame}
+              disabled={isStarting}
+            >
+              <Play className="w-6 h-6 mr-2" />
+              {isStarting ? "啟動中..." : "開始遊戲"}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => navigate("/stats")}
+            >
+              查看戰績排行榜
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
