@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 import random
@@ -10,8 +9,6 @@ import json
 from datetime import datetime
 from enum import Enum
 import asyncio
-import os
-from pathlib import Path
 
 app = FastAPI(title="終極密碼遊戲 API v2")
 
@@ -742,55 +739,18 @@ async def get_game_details(game_uuid: str):
         ]
     }
 
-# ===== 靜態文件服務 (用於生產環境) =====
-dist_path = Path(__file__).parent.parent / "dist"
-
-# 先定義一個 API 健康檢查端點
-@app.get("/health")
-async def health_check():
+# ===== API 健康檢查 =====
+@app.get("/")
+async def root():
     return {
-        "status": "healthy",
+        "message": "終極密碼遊戲 API v2",
         "version": "2.0",
-        "dist_exists": dist_path.exists()
+        "features": ["Database", "AI Players", "Statistics"]
     }
 
-if dist_path.exists() and (dist_path / "index.html").exists():
-    from fastapi.responses import FileResponse
-    from starlette.exceptions import HTTPException as StarletteHTTPException
-    
-    # 掛載靜態文件
-    if (dist_path / "assets").exists():
-        app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
-    
-    # 使用 exception handler 來處理 404，為 SPA 提供 index.html
-    @app.exception_handler(StarletteHTTPException)
-    async def custom_http_exception_handler(request, exc):
-        if exc.status_code == 404:
-            # 如果是 API 請求，保持 404
-            if request.url.path.startswith("/api"):
-                return JSONResponse(
-                    status_code=404,
-                    content={"detail": "Not found"}
-                )
-            # 其他請求返回 index.html（用於 SPA 路由）
-            return FileResponse(dist_path / "index.html")
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"detail": exc.detail}
-        )
-    
-    @app.get("/", response_class=FileResponse)
-    async def serve_root():
-        return FileResponse(dist_path / "index.html")
-else:
-    @app.get("/")
-    async def root():
-        return {
-            "message": "終極密碼遊戲 API v2",
-            "version": "2.0",
-            "dist_path": str(dist_path),
-            "dist_exists": dist_path.exists()
-        }
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "version": "2.0"}
 
 if __name__ == "__main__":
     import uvicorn
