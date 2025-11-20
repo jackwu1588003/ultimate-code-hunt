@@ -746,35 +746,24 @@ async def get_game_details(game_uuid: str):
 # 檢查是否存在打包好的前端文件
 dist_path = Path(__file__).parent.parent / "dist"
 if dist_path.exists():
+    from fastapi.responses import FileResponse
+    
     # 掛載靜態文件（CSS、JS、圖片等）
     app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
     
-    # 所有其他路徑返回 index.html（支援 SPA 路由）
-    from fastapi.responses import FileResponse
-    
+    # SPA 路由處理 - 必須放在最後
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        # API 路徑跳過
-        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
-            raise HTTPException(status_code=404, detail="Not found")
-        
-        # 檢查是否是靜態文件
+        # 檢查是否是靜態文件（非 API 路徑）
         file_path = dist_path / full_path
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
         
-        # 否則返回 index.html（用於 React Router）
+        # 所有其他非 API 路徑返回 index.html（支援 React Router）
         return FileResponse(dist_path / "index.html")
-else:
-    @app.get("/")
-    async def root():
-        return {
-            "message": "終極密碼遊戲 API v2",
-            "version": "2.0",
-            "features": ["Database", "AI Players", "Statistics"]
-        }
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
 
