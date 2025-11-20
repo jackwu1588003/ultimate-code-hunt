@@ -1,8 +1,5 @@
 [[services]]
-name = "frontend"
+name = "app"
 dir = "."
-
-[[services]]
-name = "backend"
-dir = "backend"
-command = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+build_command = "npm install && npm run build && pip install -r backend/requirements.txt"
+start_command = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
