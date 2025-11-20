@@ -26,13 +26,17 @@ description: 如何在 Zeabur 部署後端
 1. 在專案頁面中，點擊 **"Add Service"** 或 **"新增服務"**
 2. 選擇 **"Git"**
 3. 選擇你的 GitHub repository：`ultimate-code-hunt`
-4. Zeabur 會自動偵測到這是一個 Python 專案
+4. Zeabur 會自動偵測專案
 
-### 4. 配置環境變數（如果需要）
+### 4. 配置服務路徑 (Critical Step)
 
-1. 點擊服務卡片
-2. 進入 **"Variables"** 或 **"環境變數"** 標籤
-3. 添加任何需要的環境變數（目前專案可能不需要）
+由於我們將後端代碼移動到了 `backend` 目錄，你需要告訴 Zeabur 在哪裡找到它：
+
+1. 點擊新創建的服務卡片
+2. 進入 **"Settings"** 或 **"設定"**
+3. 找到 **"Root Directory"** 或 **"Service Path"**
+4. 輸入 `/backend` 並保存
+5. 服務應該會自動重新部署。如果沒有，請手動觸發重新部署。
 
 ### 5. 配置啟動命令
 
@@ -65,10 +69,10 @@ Zeabur 應該會自動偵測到 FastAPI，但如果需要手動配置：
 
 ## 常見問題
 
-### 部署失敗？
+### 部署失敗：`uvicorn: not found`？
 
-- 檢查 `requirements.txt` 是否包含所有依賴
-- 查看 Zeabur 的部署日誌（Logs）找出錯誤原因
+- 這通常是因為 Zeabur 誤判專案類型（例如誤認為是 Node.js 專案）。
+- **解決方法**：確保你已經設定了 **Root Directory** 為 `/backend`。這樣 Zeabur 才會看到 `requirements.txt` 並安裝 Python 依賴。
 
 ### 資料庫問題？
 
