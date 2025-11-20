@@ -10,7 +10,12 @@ import {
   GameState,
 } from "@/types/game";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+// 自動處理 API base URL
+let API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+// 如果環境變數沒有以 /api 結尾，自動添加
+if (API_BASE_URL && !API_BASE_URL.endsWith('/api')) {
+  API_BASE_URL = API_BASE_URL.replace(/\/$/, '') + '/api';
+}
 
 export const gameApi = {
   async startGame(request: StartGameRequest): Promise<StartGameResponse> {
