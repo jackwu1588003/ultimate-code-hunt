@@ -743,27 +743,60 @@ async def get_game_details(game_uuid: str):
     }
 
 # ===== 靜態文件服務 (用於生產環境) =====
-# 檢查是否存在打包好的前端文件
 dist_path = Path(__file__).parent.parent / "dist"
-if dist_path.exists():
+
+# 先定義一個 API 健康檢查端點
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "version": "2.0",
+        "dist_exists": dist_path.exists()
+    }
+
+if dist_path.exists() and (dist_path / "index.html").exists():
     from fastapi.responses import FileResponse
+    from starlette.exceptions import HTTPException as StarletteHTTPException
     
-    # 掛載靜態文件（CSS、JS、圖片等）
-    app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
+    # 掛載靜態文件
+    if (dist_path / "assets").exists():
+        app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
     
-    # SPA 路由處理 - 必須放在最後
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        # 檢查是否是靜態文件（非 API 路徑）
-        file_path = dist_path / full_path
-        if file_path.exists() and file_path.is_file():
-            return FileResponse(file_path)
-        
-        # 所有其他非 API 路徑返回 index.html（支援 React Router）
+    # 使用 exception handler 來處理 404，為 SPA 提供 index.html
+    @app.exception_handler(StarletteHTTPException)
+    async def custom_http_exception_handler(request, exc):
+        if exc.status_code == 404:
+            # 如果是 API 請求，保持 404
+            if request.url.path.startswith("/api"):
+                return JSONResponse(
+                    status_code=404,
+                    content={"detail": "Not found"}
+                )
+            # 其他請求返回 index.html（用於 SPA 路由）
+            return FileResponse(dist_path / "index.html")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
+    
+    @app.get("/", response_class=FileResponse)
+    async def serve_root():
         return FileResponse(dist_path / "index.html")
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "message": "終極密碼遊戲 API v2",
+            "version": "2.0",
+            "dist_path": str(dist_path),
+            "dist_exists": dist_path.exists()
+        }
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
 
 

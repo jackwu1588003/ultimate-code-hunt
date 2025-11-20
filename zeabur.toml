@@ -2,4 +2,4 @@
 name = "app"
 dir = "."
 build_command = "npm install && npm run build && pip install -r backend/requirements.txt"
-start_command = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+start_command = "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
