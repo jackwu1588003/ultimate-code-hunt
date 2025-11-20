@@ -1,4 +1,8 @@
 [[services]]
+name = "frontend"
+dir = "."
+
+[[services]]
 name = "backend"
 dir = "backend"
 command = "uvicorn main:app --host 0.0.0.0 --port $PORT"
