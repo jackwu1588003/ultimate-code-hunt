@@ -28,23 +28,23 @@ description: 如何在 Zeabur 部署後端
 3. 選擇你的 GitHub repository：`ultimate-code-hunt`
 4. Zeabur 會自動偵測專案
 
-### 4. 配置服務路徑 (Critical Step)
+### 4. 自動配置 (推薦)
 
-由於我們將後端代碼移動到了 `backend` 目錄，你需要告訴 Zeabur 在哪裡找到它：
+我們已經在專案根目錄添加了 `zeabur.toml` 文件。Zeabur 應該會自動讀取此文件並配置服務。
 
-1. 點擊新創建的服務卡片
-2. 進入 **"Settings"** 或 **"設定"**
-3. 找到 **"Root Directory"** 或 **"Service Path"**
-4. 輸入 `/backend` 並保存
-5. 服務應該會自動重新部署。如果沒有，請手動觸發重新部署。
+1. 推送代碼到 GitHub。
+2. Zeabur 會自動檢測到 `zeabur.toml` 並創建一個名為 `backend` 的服務。
+3. **注意**：如果 Zeabur 創建了一個新的服務，你可能需要刪除舊的部署失敗的服務。
 
-### 5. 配置啟動命令
+### 5. 手動配置 (如果自動配置失敗)
 
-Zeabur 應該會自動偵測到 FastAPI，但如果需要手動配置：
+如果 `zeabur.toml` 沒有生效，請手動配置：
 
 1. 點擊服務卡片
 2. 進入 **"Settings"** 或 **"設定"**
-3. 在 **"Start Command"** 中輸入：
+3. 找到 **"Root Directory"** 或 **"Service Path"**
+4. 輸入 `/backend` 並保存
+5. 在 **"Start Command"** 中輸入：
    ```
    uvicorn main:app --host 0.0.0.0 --port ${PORT}
    ```
