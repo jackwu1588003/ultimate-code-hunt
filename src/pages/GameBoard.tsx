@@ -96,21 +96,52 @@ const GameBoard = () => {
   const localPlayerId = parseInt(localStorage.getItem(`player_id_${roomId}`) || "0");
   const isMyTurn = currentPlayer?.id === localPlayerId;
 
+  // Calculate the last called number to enforce consecutive selection
+  const lastCalledNumber = gameState.called_numbers.length > 0
+    ? Math.max(...gameState.called_numbers)
+    : gameState.number_range[0] - 1;
+
+  const isNumberDisabled = (number: number) => {
+    // If already called, it's disabled (handled by NumberGrid internally too, but good for completeness)
+    if (gameState.called_numbers.includes(number)) return true;
+
+    // If no numbers selected yet, only allow the next consecutive number
+    if (selectedNumbers.length === 0) {
+      return number !== lastCalledNumber + 1;
+    }
+
+    // If numbers are selected, enforce LIFO selection/deselection
+    const maxSelected = Math.max(...selectedNumbers);
+
+    // Allow selecting the next number in sequence
+    if (number === maxSelected + 1) return false;
+
+    // Allow deselecting the LAST selected number (LIFO)
+    if (number === maxSelected) return false;
+
+    return true;
+  };
+
   const handleNumberSelect = (number: number) => {
-    if (currentPlayer?.is_ai || !isMyTurn) return; // Prevent interaction during AI turn or other player's turn
+    if (currentPlayer?.is_ai || !isMyTurn) return;
+
     if (selectedNumbers.includes(number)) {
-      setSelectedNumbers(selectedNumbers.filter((n) => n !== number));
-    } else if (selectedNumbers.length < 3) {
-      // Check if consecutive
-      if (selectedNumbers.length > 0) {
-        const sorted = [...selectedNumbers, number].sort((a, b) => a - b);
-        const isConsecutive = sorted.every((n, i) => i === 0 || n === sorted[i - 1] + 1);
-        if (!isConsecutive) {
-          toast.error("只能選擇連續的號碼！");
-          return;
-        }
+      // Deselect logic: Only allow deselecting the last one
+      const maxSelected = Math.max(...selectedNumbers);
+      if (number === maxSelected) {
+        setSelectedNumbers(selectedNumbers.filter((n) => n !== number));
+      } else {
+        toast.error("只能取消選擇最後一個號碼！");
       }
-      setSelectedNumbers([...selectedNumbers, number].sort((a, b) => a - b));
+    } else if (selectedNumbers.length < 3) {
+      // Select logic: Must be consecutive
+      const maxSelected = selectedNumbers.length > 0 ? Math.max(...selectedNumbers) : lastCalledNumber;
+
+      if (number === maxSelected + 1) {
+        setSelectedNumbers([...selectedNumbers, number].sort((a, b) => a - b));
+      } else {
+        toast.error("只能選擇連續的號碼！");
+      }
     } else {
       toast.error("最多只能選擇 3 個號碼！");
     }
@@ -271,6 +302,7 @@ const GameBoard = () => {
               selectedNumbers={selectedNumbers}
               onNumberSelect={handleNumberSelect}
               disabled={isProcessing || currentPlayer?.is_ai || !isMyTurn}
+              isNumberDisabled={isNumberDisabled}
             />
           </CardContent>
         </Card>

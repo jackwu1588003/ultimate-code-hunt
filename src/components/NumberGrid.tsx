@@ -7,6 +7,7 @@ interface NumberGridProps {
   selectedNumbers: number[];
   onNumberSelect: (number: number) => void;
   disabled?: boolean;
+  isNumberDisabled?: (number: number) => boolean;
 }
 
 export const NumberGrid = ({
@@ -15,6 +16,7 @@ export const NumberGrid = ({
   selectedNumbers,
   onNumberSelect,
   disabled = false,
+  isNumberDisabled,
 }: NumberGridProps) => {
   const [min, max] = range;
   const numbers = Array.from({ length: max - min + 1 }, (_, i) => min + i);
@@ -27,13 +29,14 @@ export const NumberGrid = ({
       {numbers.map((num) => {
         const isCalled = isNumberCalled(num);
         const isSelected = isNumberSelected(num);
+        const isDisabled = disabled || isCalled || (isNumberDisabled ? isNumberDisabled(num) : false);
 
         return (
           <Button
             key={num}
             variant={isSelected ? "default" : isCalled ? "secondary" : "outline"}
             size="lg"
-            disabled={disabled || isCalled}
+            disabled={isDisabled}
             onClick={() => onNumberSelect(num)}
             className={cn(
               "aspect-square text-lg font-bold transition-all duration-200",
