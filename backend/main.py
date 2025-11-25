@@ -154,10 +154,16 @@ class RoomStatus(str, Enum):
 class Room:
     def __init__(self, room_id: int):
         self.room_id = room_id
+        self.name = self._generate_random_name()
         self.players: List[Player] = []
         self.status = RoomStatus.WAITING
         self.game_id: Optional[str] = None
         self.max_players = 5
+
+    def _generate_random_name(self):
+        adjectives = ["快樂的", "勇敢的", "神秘的", "幸運的", "瘋狂的", "超級", "無敵", "閃亮", "傳奇", "終極"]
+        nouns = ["老虎", "獅子", "老鷹", "鯊魚", "熊貓", "巨龍", "鳳凰", "戰士", "法師", "獵人"]
+        return f"{random.choice(adjectives)}{random.choice(nouns)}"
 
     def add_player(self, player: Player):
         if len(self.players) >= self.max_players:
@@ -186,6 +192,7 @@ class Room:
     def to_dict(self):
         return {
             "room_id": self.room_id,
+            "name": self.name,
             "status": self.status,
             "player_count": len(self.players),
             "max_players": self.max_players,
@@ -527,6 +534,15 @@ async def get_room(room_id: int):
     if room_id not in rooms:
         raise HTTPException(404, "房間不存在")
     return rooms[room_id].to_dict()
+
+@app.post("/api/rooms/create")
+async def create_room():
+    # Find first empty room
+    for room in rooms.values():
+        if room.status == RoomStatus.WAITING and len(room.players) == 0:
+            return room.to_dict()
+    
+    raise HTTPException(400, "所有房間已滿")
 
 class JoinRoomRequest(BaseModel):
     player_name: str

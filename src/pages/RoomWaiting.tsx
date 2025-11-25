@@ -126,85 +126,89 @@ const RoomWaiting = () => {
             </div>
             <Card className="w-full max-w-2xl bg-white/95 backdrop-blur dark:bg-card/95">
                 <CardHeader>
-                    <CardTitle className="text-3xl text-center flex items-center justify-center gap-4">
-                        <span>Room {roomId}</span>
-                        <Badge variant="secondary" className="text-lg">
-                            {room.player_count} / {room.max_players} 人
-                        </Badge>
+                    <CardTitle className="text-3xl text-center flex flex-col items-center justify-center gap-2">
+                        <span className="font-bold">{room.name}</span>
+                        <span className="text-sm text-muted-foreground font-normal">Room #{roomId}</span>
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-8">
-
-                    {/* Player List */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {room.players.map((player: any) => (
-                            <div key={player.id} className="flex items-center p-3 bg-gray-100 rounded-lg shadow-sm">
-                                <Avatar className="h-10 w-10 mr-3">
-                                    <AvatarFallback className={player.is_ai ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"}>
-                                        {player.is_ai ? <Bot size={20} /> : <User size={20} />}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1">
-                                    <div className="font-semibold">{player.name}</div>
-                                    <div className="text-xs text-gray-500">{player.is_ai ? "AI Player" : "Human"}</div>
-                                </div>
-                                {player.id === currentPlayerId && (
-                                    <Badge variant="outline" className="ml-2">You</Badge>
-                                )}
-                            </div>
-                        ))}
-
-                        {/* Empty Slots */}
-                        {Array.from({ length: Math.max(0, room.max_players - room.player_count) }).map((_, i) => (
-                            <div key={`empty-${i}`} className="flex items-center p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 justify-center">
-                                等待加入...
-                            </div>
-                        ))}
+                <CardContent className="space-y-6">
+                    <div className="text-center">
+                        <Badge variant="outline" className="text-lg px-4 py-1">
+                            {room.players.length} / {room.max_players} 玩家
+                        </Badge>
                     </div>
 
-                    {/* Controls */}
-                    {!isJoined ? (
-                        <div className="flex gap-4 items-center justify-center pt-4 border-t">
-                            <Input
-                                placeholder="輸入你的暱稱..."
-                                value={playerName}
-                                onChange={(e) => setPlayerName(e.target.value)}
-                                className="max-w-xs"
-                            />
-                            <Button onClick={handleJoin} disabled={isLoading || !playerName.trim()}>
-                                加入房間
-                            </Button>
-                            <Button variant="outline" onClick={() => navigate("/lobby")}>
-                                返回大廳
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-4 pt-4 border-t">
-                            <div className="flex justify-center gap-4">
-                                <Button
-                                    size="lg"
-                                    className="w-full md:w-auto bg-green-600 hover:bg-green-700"
-                                    onClick={handleStartGame}
-                                    disabled={room.player_count < 2}
-                                >
-                                    <Play className="mr-2 h-5 w-5" /> 開始遊戲
-                                </Button>
+                    <div className="space-y-4">
+                        {/* Player List */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {room.players.map((player: any) => (
+                                <div key={player.id} className="flex items-center p-3 bg-gray-100 rounded-lg shadow-sm">
+                                    <Avatar className="h-10 w-10 mr-3">
+                                        <AvatarFallback className={player.is_ai ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"}>
+                                            {player.is_ai ? <Bot size={20} /> : <User size={20} />}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1">
+                                        <div className="font-semibold">{player.name}</div>
+                                        <div className="text-xs text-gray-500">{player.is_ai ? "AI Player" : "Human"}</div>
+                                    </div>
+                                    {player.id === currentPlayerId && (
+                                        <Badge variant="outline" className="ml-2">You</Badge>
+                                    )}
+                                </div>
+                            ))}
 
-                                {room.player_count < room.max_players && (
-                                    <Button variant="secondary" onClick={handleAddAI}>
-                                        + 加入 AI
+                            {/* Empty Slots */}
+                            {Array.from({ length: Math.max(0, room.max_players - room.player_count) }).map((_, i) => (
+                                <div key={`empty-${i}`} className="flex items-center p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-400 justify-center">
+                                    等待加入...
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Controls */}
+                        {!isJoined ? (
+                            <div className="flex gap-4 items-center justify-center pt-4 border-t">
+                                <Input
+                                    placeholder="輸入你的暱稱..."
+                                    value={playerName}
+                                    onChange={(e) => setPlayerName(e.target.value)}
+                                    className="max-w-xs"
+                                />
+                                <Button onClick={handleJoin} disabled={isLoading || !playerName.trim()}>
+                                    加入房間
+                                </Button>
+                                <Button variant="outline" onClick={() => navigate("/lobby")}>
+                                    返回大廳
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-4 pt-4 border-t">
+                                <div className="flex justify-center gap-4">
+                                    <Button
+                                        size="lg"
+                                        className="w-full md:w-auto bg-green-600 hover:bg-green-700"
+                                        onClick={handleStartGame}
+                                        disabled={room.player_count < 2}
+                                    >
+                                        <Play className="mr-2 h-5 w-5" /> 開始遊戲
                                     </Button>
-                                )}
-                            </div>
 
-                            <div className="flex justify-center">
-                                <Button variant="ghost" onClick={handleLeave} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                                    <LogOut className="mr-2 h-4 w-4" /> 離開房間
-                                </Button>
-                            </div>
-                        </div>
-                    )}
+                                    {room.player_count < room.max_players && (
+                                        <Button variant="secondary" onClick={handleAddAI}>
+                                            + 加入 AI
+                                        </Button>
+                                    )}
+                                </div>
 
+                                <div className="flex justify-center">
+                                    <Button variant="ghost" onClick={handleLeave} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                                        <LogOut className="mr-2 h-4 w-4" /> 離開房間
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
         </div>

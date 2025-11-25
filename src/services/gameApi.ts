@@ -12,6 +12,7 @@ import {
 
 export interface Room {
   room_id: number;
+  name: string;
   status: 'waiting' | 'playing' | 'full';
   player_count: number;
   max_players: number;
@@ -125,6 +126,14 @@ export const gameApi = {
   async getRoom(roomId: number): Promise<Room> {
     const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`);
     if (!response.ok) throw new Error("Failed to get room");
+    return response.json();
+  },
+
+  async createRoom(): Promise<Room> {
+    const response = await fetch(`${API_BASE_URL}/rooms/create`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to create room");
     return response.json();
   },
 
