@@ -8,7 +8,7 @@ import GameBoard from "./pages/GameBoard";
 import GameResult from "./pages/GameResult";
 import Stats from "./pages/Stats";
 import NotFound from "./pages/NotFound";
-import NotFound from "./pages/NotFound";
+
 import RoomLobby from "./pages/RoomLobby";
 import RoomWaiting from "./pages/RoomWaiting";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -27,8 +27,7 @@ const App = () => (
             <Route path="/" element={<GameStart />} />
             <Route path="/game" element={<GameBoard />} />
             <Route path="/result" element={<GameResult />} />
-            <Route path="/game" element={<GameBoard />} />
-            <Route path="/result" element={<GameResult />} />
+
             <Route path="/stats" element={<Stats />} />
             <Route path="/lobby" element={<RoomLobby />} />
             <Route path="/room/:roomId" element={<RoomWaiting />} />
@@ -38,8 +37,8 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
-  </ThemeProvider >
 );
 
 export default App;

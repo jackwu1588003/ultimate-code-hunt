@@ -159,6 +159,8 @@ class Room:
         self.status = RoomStatus.WAITING
         self.game_id: Optional[str] = None
         self.max_players = 5
+        self.created_at = datetime.now()
+        self.last_activity = datetime.now()
 
     def _generate_random_name(self):
         adjectives = ["快樂的", "勇敢的", "神秘的", "幸運的", "瘋狂的", "超級", "無敵", "閃亮", "傳奇", "終極"]
@@ -405,10 +407,10 @@ class GameState:
             if room.game_id == self.game_id:
                 room.status = RoomStatus.WAITING
                 room.game_id = None
+                room.last_activity = datetime.now() # Update activity
                 # Broadcast update
                 # We need to run this async, but we are in a sync method.
                 # In FastAPI, we can use background tasks or just fire and forget if we had the loop.
-                # Since this is called from API endpoints which are async, we might be able to restructure.
                 # However, _update_game_end is called internally.
                 # Let's just update the state for now. The polling/websocket will pick it up eventually?
                 # No, we want real-time.
@@ -445,8 +447,8 @@ class UseReverseRequest(BaseModel):
 
 # ===== 遊戲狀態 =====
 games = {}
-# Initialize 100 rooms
-rooms = {i: Room(i) for i in range(1, 101)}
+# Dynamic rooms dictionary
+rooms: dict[int, "Room"] = {}
 
 # ===== WebSocket 管理 =====
 class ConnectionManager:
@@ -522,6 +524,37 @@ async def notify_room_update(room_id: int, room: Room):
     await manager.broadcast_room(room_id, {"type": "room_update", "room": room.to_dict()})
     await notify_lobby_update() # Lobby also needs to know status changed
 
+# ===== Background Tasks =====
+async def cleanup_inactive_rooms():
+    while True:
+        await asyncio.sleep(60) # Check every minute
+        now = datetime.now()
+        rooms_to_delete = []
+        for room_id, room in rooms.items():
+            # If room is empty, it should have been deleted, but check just in case
+            if len(room.players) == 0:
+                rooms_to_delete.append(room_id)
+                continue
+            
+            # Check inactivity (2 hours)
+            if (now - room.last_activity).total_seconds() > 7200: # 2 hours
+                rooms_to_delete.append(room_id)
+        
+        for room_id in rooms_to_delete:
+            if room_id in rooms:
+                del rooms[room_id]
+                # Notify lobby?
+                await notify_lobby_update()
+                # Close websocket connections for this room
+                if room_id in manager.room_connections:
+                    for ws in manager.room_connections[room_id]:
+                        await ws.close()
+                    del manager.room_connections[room_id]
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(cleanup_inactive_rooms())
+
 # ===== API 端點 =====
 @app.get("/api/rooms")
 async def get_rooms():
@@ -537,12 +570,17 @@ async def get_room(room_id: int):
 
 @app.post("/api/rooms/create")
 async def create_room():
-    # Find first empty room
-    for room in rooms.values():
-        if room.status == RoomStatus.WAITING and len(room.players) == 0:
-            return room.to_dict()
+    # Generate a random room ID (6 digits)
+    while True:
+        room_id = random.randint(100000, 999999)
+        if room_id not in rooms:
+            break
     
-    raise HTTPException(400, "所有房間已滿")
+    new_room = Room(room_id)
+    rooms[room_id] = new_room
+    
+    await notify_lobby_update()
+    return new_room.to_dict()
 
 class JoinRoomRequest(BaseModel):
     player_name: str
@@ -566,6 +604,7 @@ async def join_room(room_id: int, request: JoinRoomRequest):
     )
     
     room.add_player(new_player)
+    room.last_activity = datetime.now() # Update activity
     
     # Broadcast update
     await notify_room_update(room_id, room)
@@ -592,7 +631,14 @@ async def leave_room_action(room_id: int, request: LeaveRoomRequest):
     
     room = rooms[room_id]
     room.remove_player(request.player_id)
+    room.last_activity = datetime.now() # Update activity
     
+    # Check if room is empty
+    if len(room.players) == 0:
+        del rooms[room_id]
+        await notify_lobby_update()
+        return {"success": True, "message": "Room deleted"}
+
     # Broadcast update
     await notify_room_update(room_id, room)
     

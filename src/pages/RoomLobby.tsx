@@ -79,7 +79,7 @@ const RoomLobby = () => {
 
                 <Card className="bg-white/90 backdrop-blur-sm">
                     <CardHeader>
-                        <CardTitle>房間列表 (1-100)</CardTitle>
+                        <CardTitle>房間列表</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <ScrollArea className="h-[70vh] pr-4">
