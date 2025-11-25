@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { gameApi, Room } from "@/services/gameApi";
 import { webSocketService } from "@/services/WebSocketService";
 import { toast } from "sonner";
-import { User, Bot, LogOut, Play, Dices } from "lucide-react";
+import { User, Bot, LogOut, Play, Dices, Copy } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const generateRandomName = () => {
@@ -134,7 +134,21 @@ const RoomWaiting = () => {
                 <CardHeader>
                     <CardTitle className="text-3xl text-center flex flex-col items-center justify-center gap-2">
                         <span className="font-bold">{room.name}</span>
-                        <span className="text-sm text-muted-foreground font-normal">Room #{roomId}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground font-normal">Room #{roomId}</span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(roomId || "");
+                                    toast.success("已複製房間號碼");
+                                }}
+                                title="複製房間號碼"
+                            >
+                                <Copy className="h-3 w-3" />
+                            </Button>
+                        </div>
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
