@@ -92,8 +92,12 @@ const GameBoard = () => {
   const currentPlayer = gameState.players.find((p) => p.id === gameState.current_player);
   const alivePlayers = gameState.players.filter((p) => p.is_alive);
 
+  // Get local player ID
+  const localPlayerId = parseInt(localStorage.getItem(`player_id_${roomId}`) || "0");
+  const isMyTurn = currentPlayer?.id === localPlayerId;
+
   const handleNumberSelect = (number: number) => {
-    if (currentPlayer?.is_ai) return; // Prevent interaction during AI turn
+    if (currentPlayer?.is_ai || !isMyTurn) return; // Prevent interaction during AI turn or other player's turn
     if (selectedNumbers.includes(number)) {
       setSelectedNumbers(selectedNumbers.filter((n) => n !== number));
     } else if (selectedNumbers.length < 3) {
@@ -113,7 +117,7 @@ const GameBoard = () => {
   };
 
   const handleCallNumbers = async () => {
-    if (currentPlayer?.is_ai) return;
+    if (currentPlayer?.is_ai || !isMyTurn) return;
     if (selectedNumbers.length === 0) {
       toast.error("請至少選擇一個號碼！");
       return;
@@ -161,7 +165,7 @@ const GameBoard = () => {
   };
 
   const handlePass = async () => {
-    if (currentPlayer?.is_ai) return;
+    if (currentPlayer?.is_ai || !isMyTurn) return;
     if (!currentPlayer?.pass_available) {
       toast.error("本輪 Pass 已使用！");
       return;
@@ -187,7 +191,7 @@ const GameBoard = () => {
   };
 
   const handleReverse = async () => {
-    if (currentPlayer?.is_ai) return;
+    if (currentPlayer?.is_ai || !isMyTurn) return;
     if (!currentPlayer?.reverse_available) {
       toast.error("本輪迴轉已使用！");
       return;
@@ -243,7 +247,7 @@ const GameBoard = () => {
               player={currentPlayer}
               isActive={true}
               isLarge={true}
-              status={isProcessing && currentPlayer.is_ai ? "AI 思考中..." : undefined}
+              status={isProcessing && currentPlayer.is_ai ? "AI 思考中..." : (!isMyTurn && !currentPlayer.is_ai ? "等待對手行動..." : undefined)}
             />
           </div>
         )}
@@ -266,7 +270,7 @@ const GameBoard = () => {
               calledNumbers={gameState.called_numbers}
               selectedNumbers={selectedNumbers}
               onNumberSelect={handleNumberSelect}
-              disabled={isProcessing || currentPlayer?.is_ai}
+              disabled={isProcessing || currentPlayer?.is_ai || !isMyTurn}
             />
           </CardContent>
         </Card>
@@ -276,7 +280,7 @@ const GameBoard = () => {
           <Button
             size="lg"
             onClick={handleCallNumbers}
-            disabled={isProcessing || selectedNumbers.length === 0 || currentPlayer?.is_ai}
+            disabled={isProcessing || selectedNumbers.length === 0 || currentPlayer?.is_ai || !isMyTurn}
             className="text-lg py-6"
           >
             <ArrowRight className="w-5 h-5 mr-2" />
@@ -287,7 +291,7 @@ const GameBoard = () => {
             size="lg"
             variant="outline"
             onClick={handlePass}
-            disabled={isProcessing || !currentPlayer?.pass_available || currentPlayer?.is_ai}
+            disabled={isProcessing || !currentPlayer?.pass_available || currentPlayer?.is_ai || !isMyTurn}
             className="text-lg py-6"
           >
             <CircleSlash className="w-5 h-5 mr-2" />
@@ -298,7 +302,7 @@ const GameBoard = () => {
             size="lg"
             variant="outline"
             onClick={handleReverse}
-            disabled={isProcessing || !currentPlayer?.reverse_available || currentPlayer?.is_ai}
+            disabled={isProcessing || !currentPlayer?.reverse_available || currentPlayer?.is_ai || !isMyTurn}
             className="text-lg py-6"
           >
             <RotateCcw className="w-5 h-5 mr-2" />

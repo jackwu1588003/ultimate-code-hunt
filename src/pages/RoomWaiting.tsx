@@ -251,7 +251,6 @@ const RoomWaiting = () => {
 
                     </div>
 
-                        // ... (render)
                     {/* Controls */}
                     {!isJoined ? (
                         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center pt-4 border-t">
