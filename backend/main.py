@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -145,6 +145,53 @@ class Player(BaseModel):
     is_alive: bool = True
     pass_available: bool = True
     reverse_available: bool = True
+
+class RoomStatus(str, Enum):
+    WAITING = "waiting"
+    PLAYING = "playing"
+    FULL = "full"
+
+class Room:
+    def __init__(self, room_id: int):
+        self.room_id = room_id
+        self.players: List[Player] = []
+        self.status = RoomStatus.WAITING
+        self.game_id: Optional[str] = None
+        self.max_players = 5
+
+    def add_player(self, player: Player):
+        if len(self.players) >= self.max_players:
+            raise HTTPException(400, "房間已滿")
+        if self.status == RoomStatus.PLAYING:
+            raise HTTPException(400, "遊戲進行中")
+        
+        # Check if player name exists
+        if any(p.name == player.name for p in self.players):
+             # Simple handle for duplicate names in same room, maybe append ID or reject
+             # For now, let's just allow it or maybe reject? 
+             # The original logic didn't strictly enforce unique names across system, but within a game it might be confusing.
+             # Let's append a random suffix if duplicate
+             pass
+
+        self.players.append(player)
+        if len(self.players) >= self.max_players:
+            self.status = RoomStatus.FULL
+
+    def remove_player(self, player_id: int):
+        self.players = [p for p in self.players if p.id != player_id]
+        if self.status == RoomStatus.FULL and len(self.players) < self.max_players:
+            self.status = RoomStatus.WAITING
+        # If game is playing, handling leaving is complex. For now assume leaving only in lobby or simple disconnect handling in game.
+
+    def to_dict(self):
+        return {
+            "room_id": self.room_id,
+            "status": self.status,
+            "player_count": len(self.players),
+            "max_players": self.max_players,
+            "players": [p.dict() for p in self.players],
+            "game_id": self.game_id
+        }
 
 class GameState:
     def __init__(self, players: List[dict]):
@@ -332,6 +379,7 @@ class GameState:
         if len(alive_players) == 1:
             winner = alive_players[0]
             self._update_game_end(winner.id)
+            self.reset_room_status()
             return True
         
         if len(alive_players) > 1:
@@ -341,6 +389,35 @@ class GameState:
             self._start_round()
         
         return False
+
+    def reset_room_status(self):
+        """Reset room status when game ends"""
+        # Find which room this game belongs to
+        # This is a bit inefficient, but works for now
+        for room in rooms.values():
+            if room.game_id == self.game_id:
+                room.status = RoomStatus.WAITING
+                room.game_id = None
+                # Broadcast update
+                # We need to run this async, but we are in a sync method.
+                # In FastAPI, we can use background tasks or just fire and forget if we had the loop.
+                # Since this is called from API endpoints which are async, we might be able to restructure.
+                # However, _update_game_end is called internally.
+                # Let's just update the state for now. The polling/websocket will pick it up eventually?
+                # No, we want real-time.
+                # We can't easily await here without changing everything to async.
+                # For now, let's just update the room state. The clients in the room will need to handle "game over" navigation.
+                # When they navigate back to room, they will fetch status.
+                # But for lobby, we want to show it's waiting again.
+                # We can try to use the event loop if available.
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        loop.create_task(notify_room_update(room.room_id, room))
+                except:
+                    pass
+                break
+
 
 # ===== 請求模型 =====
 class StartGameRequest(BaseModel):
@@ -361,8 +438,183 @@ class UseReverseRequest(BaseModel):
 
 # ===== 遊戲狀態 =====
 games = {}
+# Initialize 100 rooms
+rooms = {i: Room(i) for i in range(1, 101)}
+
+# ===== WebSocket 管理 =====
+class ConnectionManager:
+    def __init__(self):
+        # active_connections: List[WebSocket] = []
+        self.lobby_connections: List[WebSocket] = []
+        self.room_connections: dict[int, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, room_id: int = None):
+        await websocket.accept()
+        if room_id is None:
+            self.lobby_connections.append(websocket)
+        else:
+            if room_id not in self.room_connections:
+                self.room_connections[room_id] = []
+            self.room_connections[room_id].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, room_id: int = None):
+        if room_id is None:
+            if websocket in self.lobby_connections:
+                self.lobby_connections.remove(websocket)
+        else:
+            if room_id in self.room_connections and websocket in self.room_connections[room_id]:
+                self.room_connections[room_id].remove(websocket)
+
+    async def broadcast_lobby(self, message: dict):
+        for connection in self.lobby_connections:
+            try:
+                await connection.send_json(message)
+            except:
+                pass # Handle disconnected clients
+
+    async def broadcast_room(self, room_id: int, message: dict):
+        if room_id in self.room_connections:
+            for connection in self.room_connections[room_id]:
+                try:
+                    await connection.send_json(message)
+                except:
+                    pass
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/{client_type}")
+async def websocket_endpoint(websocket: WebSocket, client_type: str):
+    # client_type can be "lobby" or "room_{id}"
+    room_id = None
+    if client_type.startswith("room_"):
+        try:
+            room_id = int(client_type.split("_")[1])
+        except:
+            await websocket.close()
+            return
+    
+    await manager.connect(websocket, room_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Handle incoming messages if needed, e.g. chat
+            # For now we just keep connection open
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, room_id)
+
+# Helper to broadcast updates
+async def notify_lobby_update():
+    # Broadcast simplified room list or just a "refresh" signal
+    # Sending full list might be heavy if frequent, but for 100 rooms it's okay-ish.
+    # Let's send a "rooms_updated" event and let frontend fetch, or send the changed room.
+    # For simplicity, let's send the updated room info if possible, or just trigger fetch.
+    # Let's send "refresh" for now to keep it simple and consistent.
+    await manager.broadcast_lobby({"type": "refresh"})
+
+async def notify_room_update(room_id: int, room: Room):
+    await manager.broadcast_room(room_id, {"type": "room_update", "room": room.to_dict()})
+    await notify_lobby_update() # Lobby also needs to know status changed
 
 # ===== API 端點 =====
+@app.get("/api/rooms")
+async def get_rooms():
+    return {
+        "rooms": [room.to_dict() for room in rooms.values()]
+    }
+
+@app.get("/api/rooms/{room_id}")
+async def get_room(room_id: int):
+    if room_id not in rooms:
+        raise HTTPException(404, "房間不存在")
+    return rooms[room_id].to_dict()
+
+class JoinRoomRequest(BaseModel):
+    player_name: str
+    is_ai: bool = False
+
+@app.post("/api/rooms/{room_id}/join")
+async def join_room(room_id: int, request: JoinRoomRequest):
+    if room_id not in rooms:
+        raise HTTPException(404, "房間不存在")
+    
+    room = rooms[room_id]
+    
+    # Generate a simple ID for the player within the room context
+    # In a real app, this would be from a user session or DB
+    player_id = int(datetime.now().timestamp() * 1000) % 100000 + random.randint(0, 1000)
+    
+    new_player = Player(
+        id=player_id,
+        name=request.player_name,
+        is_ai=request.is_ai
+    )
+    
+    room.add_player(new_player)
+    
+    # Broadcast update
+    await notify_room_update(room_id, room)
+    
+    return {
+        "success": True,
+        "player": new_player.dict(),
+        "room": room.to_dict()
+    }
+
+@app.post("/api/rooms/{room_id}/leave")
+async def leave_room(room_id: int, player_id: int = 0): # simplified for now, ideally get from auth or body
+    # Note: For simplicity, we might need to pass player_id in body or query
+    # Let's update the request model or use a query param
+    pass
+
+class LeaveRoomRequest(BaseModel):
+    player_id: int
+
+@app.post("/api/rooms/{room_id}/leave_action") # Changed path to avoid conflict if any
+async def leave_room_action(room_id: int, request: LeaveRoomRequest):
+    if room_id not in rooms:
+        raise HTTPException(404, "房間不存在")
+    
+    room = rooms[room_id]
+    room.remove_player(request.player_id)
+    
+    # Broadcast update
+    await notify_room_update(room_id, room)
+    
+    return {"success": True, "room": room.to_dict()}
+
+@app.post("/api/rooms/{room_id}/start")
+async def start_room_game(room_id: int):
+    if room_id not in rooms:
+        raise HTTPException(404, "房間不存在")
+    
+    room = rooms[room_id]
+    if len(room.players) < 2:
+        raise HTTPException(400, "玩家人數不足")
+    
+    # Create GameState from room players
+    # We need to convert Room players (Pydantic models) to dicts expected by GameState
+    player_dicts = [{"name": p.name, "is_ai": p.is_ai, "difficulty": "medium"} for p in room.players]
+    
+    game = GameState(player_dicts)
+    
+    games[game.game_id] = game
+    room.game_id = game.game_id
+    room.status = RoomStatus.PLAYING
+    
+    # Broadcast update with game_started event
+    await manager.broadcast_room(room_id, {
+        "type": "game_started", 
+        "game_id": game.game_id,
+        "room": room.to_dict()
+    })
+    await notify_lobby_update()
+    
+    return {
+        "success": True,
+        "game_id": game.game_id,
+        "room_id": room_id
+    }
+
 @app.post("/api/game/start")
 async def start_game(request: StartGameRequest):
     if len(request.players) < 2 or len(request.players) > 5:

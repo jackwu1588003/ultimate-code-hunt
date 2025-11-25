@@ -10,6 +10,7 @@ const GameResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const gameState = location.state?.gameState as GameState | null;
+  const roomId = location.state?.roomId;
 
   useEffect(() => {
     if (!gameState || !gameState.game_over) {
@@ -110,11 +111,11 @@ const GameResult = () => {
             <Button
               size="lg"
               variant="default"
-              onClick={() => navigate("/")}
+              onClick={() => roomId ? navigate(`/room/${roomId}`) : navigate("/lobby")}
               className="text-lg py-6"
             >
               <RotateCcw className="w-5 h-5 mr-2" />
-              再來一局
+              {roomId ? "返回房間" : "返回大廳"}
             </Button>
             <Button
               size="lg"

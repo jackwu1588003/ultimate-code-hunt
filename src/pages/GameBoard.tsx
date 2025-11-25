@@ -18,6 +18,7 @@ const GameBoard = () => {
   const [gameState, setGameState] = useState<GameState | null>(
     location.state?.gameState || null
   );
+  const roomId = location.state?.roomId;
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExploding, setIsExploding] = useState(false);
@@ -70,7 +71,7 @@ const GameBoard = () => {
 
           if (updatedState.game_over) {
             setTimeout(() => {
-              navigate("/result", { state: { gameState: updatedState } });
+              navigate("/result", { state: { gameState: updatedState, roomId } });
             }, 2000);
           }
         } catch (error) {
@@ -147,7 +148,7 @@ const GameBoard = () => {
       // Check if game is over
       if (updatedState.game_over) {
         setTimeout(() => {
-          navigate("/result", { state: { gameState: updatedState } });
+          navigate("/result", { state: { gameState: updatedState, roomId } });
         }, 2000);
       }
     } catch (error) {

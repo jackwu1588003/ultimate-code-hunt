@@ -10,6 +10,21 @@ import {
   GameState,
 } from "@/types/game";
 
+export interface Room {
+  room_id: number;
+  status: 'waiting' | 'playing' | 'full';
+  player_count: number;
+  max_players: number;
+  players: any[]; // refined type later
+  game_id?: string;
+}
+
+export interface JoinRoomResponse {
+  success: boolean;
+  player: any;
+  room: Room;
+}
+
 // 自動處理 API base URL
 let API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 // 如果環境變數沒有以 /api 結尾，自動添加
@@ -97,6 +112,47 @@ export const gameApi = {
   async getGameDetails(gameUuid: string) {
     const response = await fetch(`${API_BASE_URL}/stats/game/${gameUuid}`);
     if (!response.ok) throw new Error("Failed to get game details");
+    return response.json();
+  },
+
+  // Room APIs
+  async getRooms(): Promise<{ rooms: Room[] }> {
+    const response = await fetch(`${API_BASE_URL}/rooms`);
+    if (!response.ok) throw new Error("Failed to get rooms");
+    return response.json();
+  },
+
+  async getRoom(roomId: number): Promise<Room> {
+    const response = await fetch(`${API_BASE_URL}/rooms/${roomId}`);
+    if (!response.ok) throw new Error("Failed to get room");
+    return response.json();
+  },
+
+  async joinRoom(roomId: number, playerName: string, isAi: boolean = false): Promise<JoinRoomResponse> {
+    const response = await fetch(`${API_BASE_URL}/rooms/${roomId}/join`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_name: playerName, is_ai: isAi }),
+    });
+    if (!response.ok) throw new Error("Failed to join room");
+    return response.json();
+  },
+
+  async leaveRoom(roomId: number, playerId: number) {
+    const response = await fetch(`${API_BASE_URL}/rooms/${roomId}/leave_action`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_id: playerId }),
+    });
+    if (!response.ok) throw new Error("Failed to leave room");
+    return response.json();
+  },
+
+  async startRoomGame(roomId: number) {
+    const response = await fetch(`${API_BASE_URL}/rooms/${roomId}/start`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to start game");
     return response.json();
   },
 };
