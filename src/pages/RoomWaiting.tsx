@@ -35,6 +35,23 @@ const RoomWaiting = () => {
                 const data = await gameApi.getRoom(parseInt(roomId));
                 setRoom(data);
 
+                // Check for existing session
+                const savedPlayerId = localStorage.getItem(`player_id_${roomId}`);
+                if (savedPlayerId) {
+                    const playerId = parseInt(savedPlayerId);
+                    const playerExists = data.players.some((p: any) => p.id === playerId);
+                    if (playerExists) {
+                        setCurrentPlayerId(playerId);
+                        setIsJoined(true);
+                        // Find player name to restore
+                        const player = data.players.find((p: any) => p.id === playerId);
+                        if (player) setPlayerName(player.name);
+                    } else {
+                        // Player ID not in room (maybe kicked or room reset), clear storage
+                        localStorage.removeItem(`player_id_${roomId}`);
+                    }
+                }
+
                 // Initial check if game already playing
                 if (data.status === 'playing' && data.game_id) {
                     const gameState = await gameApi.getGameStatus(data.game_id);
@@ -52,6 +69,21 @@ const RoomWaiting = () => {
         const unsubscribe = webSocketService.subscribe(async (data) => {
             if (data.type === "room_update") {
                 setRoom(data.room);
+
+                // Re-verify session on update (in case we were kicked)
+                const savedPlayerId = localStorage.getItem(`player_id_${roomId}`);
+                if (savedPlayerId) {
+                    const playerId = parseInt(savedPlayerId);
+                    const playerExists = data.room.players.some((p: any) => p.id === playerId);
+                    if (!playerExists && isJoined) {
+                        // We were removed
+                        setIsJoined(false);
+                        setCurrentPlayerId(null);
+                        localStorage.removeItem(`player_id_${roomId}`);
+                        toast.error("你已被移除房間");
+                    }
+                }
+
             } else if (data.type === "game_started") {
                 toast.success("遊戲開始！");
                 const gameState = await gameApi.getGameStatus(data.game_id);
@@ -63,7 +95,7 @@ const RoomWaiting = () => {
             unsubscribe();
             webSocketService.disconnect();
         };
-    }, [roomId, navigate]);
+    }, [roomId, navigate]); // Removed isJoined from dependency to avoid loops, handled inside
 
     const handleJoin = async () => {
         if (!playerName.trim()) {
@@ -78,6 +110,8 @@ const RoomWaiting = () => {
             setIsJoined(true);
             setCurrentPlayerId(response.player.id);
             setRoom(response.room);
+            // Save session
+            localStorage.setItem(`player_id_${roomId}`, response.player.id.toString());
             toast.success("成功加入房間！");
         } catch (error) {
             console.error("Failed to join:", error);
@@ -91,6 +125,7 @@ const RoomWaiting = () => {
         if (!roomId || !currentPlayerId) return;
         try {
             await gameApi.leaveRoom(parseInt(roomId), currentPlayerId);
+            localStorage.removeItem(`player_id_${roomId}`);
             navigate("/lobby");
         } catch (error) {
             console.error("Failed to leave:", error);
