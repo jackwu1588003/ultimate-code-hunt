@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,15 @@ const RoomWaiting = () => {
     const [isJoined, setIsJoined] = useState(false);
     const [currentPlayerId, setCurrentPlayerId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Refs for WebSocket callback to access current state
+    const isJoinedRef = useRef(isJoined);
+    const currentPlayerIdRef = useRef(currentPlayerId);
+
+    useEffect(() => {
+        isJoinedRef.current = isJoined;
+        currentPlayerIdRef.current = currentPlayerId;
+    }, [isJoined, currentPlayerId]);
 
     // Poll room status
     useEffect(() => {
@@ -75,7 +84,9 @@ const RoomWaiting = () => {
                 if (savedPlayerId) {
                     const playerId = parseInt(savedPlayerId);
                     const playerExists = data.room.players.some((p: any) => p.id === playerId);
-                    if (!playerExists && isJoined) {
+
+                    // Use ref to check current joined state
+                    if (!playerExists && isJoinedRef.current) {
                         // We were removed
                         setIsJoined(false);
                         setCurrentPlayerId(null);
