@@ -25,6 +25,7 @@ const RoomWaiting = () => {
     const [isJoined, setIsJoined] = useState(false);
     const [currentPlayerId, setCurrentPlayerId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isHost, setIsHost] = useState(false);
 
     // Refs for WebSocket callback to access current state
     const isJoinedRef = useRef(isJoined);
@@ -34,6 +35,22 @@ const RoomWaiting = () => {
         isJoinedRef.current = isJoined;
         currentPlayerIdRef.current = currentPlayerId;
     }, [isJoined, currentPlayerId]);
+
+    useEffect(() => {
+        if (room && currentPlayerId) {
+            setIsHost(room.host_id === currentPlayerId);
+        }
+    }, [room, currentPlayerId]);
+
+    const handleUpdateSettings = async (newMaxPlayers: number) => {
+        if (!room || !isHost) return;
+        try {
+            await gameApi.updateRoomSettings(room.room_id, room.host_id!, newMaxPlayers);
+            toast.success("已更新房間設定");
+        } catch (error) {
+            toast.error("更新設定失敗");
+        }
+    };
 
     // Poll room status
     useEffect(() => {
@@ -232,64 +249,90 @@ const RoomWaiting = () => {
                             ))}
                         </div>
 
-                        {/* Controls */}
-                        {!isJoined ? (
-                            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center pt-4 border-t">
-                                <div className="flex gap-2 w-full max-w-xs">
-                                    <Input
-                                        placeholder="輸入你的暱稱..."
-                                        value={playerName}
-                                        onChange={(e) => setPlayerName(e.target.value)}
-                                        className="flex-1"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => setPlayerName(generateRandomName())}
-                                        title="隨機名稱"
-                                    >
-                                        <Dices className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button onClick={handleJoin} disabled={isLoading || !playerName.trim()}>
-                                        加入房間
-                                    </Button>
-                                    <Button variant="outline" onClick={() => navigate("/lobby")}>
-                                        返回大廳
-                                    </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col gap-4 pt-4 border-t">
-                                <div className="flex justify-center gap-4">
-                                    <Button
-                                        size="lg"
-                                        className="w-full md:w-auto bg-green-600 hover:bg-green-700"
-                                        onClick={handleStartGame}
-                                        disabled={room.player_count < 2}
-                                    >
-                                        <Play className="mr-2 h-5 w-5" /> 開始遊戲
-                                    </Button>
-
-                                    {room.player_count < room.max_players && (
-                                        <Button variant="secondary" onClick={handleAddAI}>
-                                            + 加入 AI
-                                        </Button>
-                                    )}
-                                </div>
-
-                                <div className="flex justify-center">
-                                    <Button variant="ghost" onClick={handleLeave} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                                        <LogOut className="mr-2 h-4 w-4" /> 離開房間
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
                     </div>
+
+                        // ... (render)
+                    {/* Controls */}
+                    {!isJoined ? (
+                        <div className="flex flex-col sm:flex-row gap-4 items-center justify-center pt-4 border-t">
+                            <div className="flex gap-2 w-full max-w-xs">
+                                <Input
+                                    placeholder="輸入你的暱稱..."
+                                    value={playerName}
+                                    onChange={(e) => setPlayerName(e.target.value)}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setPlayerName(generateRandomName())}
+                                    title="隨機名稱"
+                                >
+                                    <Dices className="w-4 h-4" />
+                                </Button>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button onClick={handleJoin} disabled={isLoading || !playerName.trim()}>
+                                    加入房間
+                                </Button>
+                                <Button variant="outline" onClick={() => navigate("/lobby")}>
+                                    返回大廳
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-4 pt-4 border-t">
+                            <div className="flex justify-center gap-4">
+                                <Button
+                                    size="lg"
+                                    className="w-full md:w-auto bg-green-600 hover:bg-green-700"
+                                    onClick={handleStartGame}
+                                    disabled={room.player_count < 2}
+                                >
+                                    <Play className="mr-2 h-5 w-5" /> 開始遊戲
+                                </Button>
+
+                                {isHost && room.player_count < room.max_players && (
+                                    <Button variant="secondary" onClick={handleAddAI}>
+                                        + 加入 AI
+                                    </Button>
+                                )}
+                            </div>
+
+                            {isHost && (
+                                <div className="flex items-center justify-center gap-4 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                    <span className="text-sm font-medium">人數上限: {room.max_players}</span>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleUpdateSettings(Math.max(2, room.max_players - 1))}
+                                            disabled={room.max_players <= 2 || room.max_players <= room.player_count}
+                                        >
+                                            -
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleUpdateSettings(Math.min(10, room.max_players + 1))}
+                                            disabled={room.max_players >= 10}
+                                        >
+                                            +
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex justify-center">
+                                <Button variant="ghost" onClick={handleLeave} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                                    <LogOut className="mr-2 h-4 w-4" /> 離開房間
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 };
 

@@ -18,6 +18,8 @@ export interface Room {
   max_players: number;
   players: any[]; // refined type later
   game_id?: string;
+  has_password?: boolean;
+  host_id?: number;
 }
 
 export interface JoinRoomResponse {
@@ -129,25 +131,53 @@ export const gameApi = {
     return response.json();
   },
 
-  async createRoom(maxPlayers: number = 5): Promise<Room> {
+  async createRoom(maxPlayers: number = 5, password?: string, playerName: string = "Host"): Promise<{ room: Room; player: any }> {
     const response = await fetch(`${API_BASE_URL}/rooms/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ max_players: maxPlayers }),
+      body: JSON.stringify({
+        max_players: maxPlayers,
+        password: password || null,
+        player_name: playerName
+      }),
     });
     if (!response.ok) throw new Error("Failed to create room");
     return response.json();
   },
 
-  async joinRoom(roomId: number, playerName: string, isAi: boolean = false): Promise<JoinRoomResponse> {
+  async joinRoom(roomId: number, playerName: string, isAi: boolean = false, password?: string): Promise<{ success: boolean; player: any; room: Room }> {
     const response = await fetch(`${API_BASE_URL}/rooms/${roomId}/join`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ player_name: playerName, is_ai: isAi }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        player_name: playerName,
+        is_ai: isAi,
+        password: password || null
+      }),
     });
-    if (!response.ok) throw new Error("Failed to join room");
+    if (!response.ok) {
+      if (response.status === 403) throw new Error("密碼錯誤");
+      throw new Error("Failed to join room");
+    }
+    return response.json();
+  },
+
+  async updateRoomSettings(roomId: number, hostId: number, maxPlayers: number): Promise<Room> {
+    const response = await fetch(`${API_BASE_URL}/rooms/${roomId}/settings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        host_id: hostId,
+        max_players: maxPlayers
+      }),
+    });
+    if (!response.ok) throw new Error("Failed to update settings");
     return response.json();
   },
 

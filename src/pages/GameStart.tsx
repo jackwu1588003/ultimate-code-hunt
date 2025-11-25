@@ -15,13 +15,21 @@ const GameStart = () => {
   const [isCreating, setIsCreating] = useState(false);
 
   const [maxPlayers, setMaxPlayers] = useState(5);
+  const [roomPassword, setRoomPassword] = useState("");
+  const [creatorName, setCreatorName] = useState("");
 
   const handleCreateRoom = async () => {
+    if (!creatorName.trim()) {
+      toast.error("請輸入您的暱稱");
+      return;
+    }
     setIsCreating(true);
     try {
-      const room = await gameApi.createRoom(maxPlayers);
-      toast.success(`成功創立房間：${room.name}`);
-      navigate(`/room/${room.room_id}`);
+      const response = await gameApi.createRoom(maxPlayers, roomPassword, creatorName);
+      toast.success(`成功創立房間：${response.room.name}`);
+      // Save session for creator
+      localStorage.setItem(`player_id_${response.room.room_id}`, response.player.id.toString());
+      navigate(`/room/${response.room.room_id}`);
     } catch (error) {
       console.error("Failed to create room:", error);
       toast.error("無法創立房間");
@@ -54,9 +62,20 @@ const GameStart = () => {
 
         <CardContent className="space-y-6">
           {/* Create Room */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between mb-2">
-              <Label className="text-lg">創立房間 (人數: {maxPlayers})</Label>
+          <div className="space-y-3 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900/50">
+            <h3 className="font-semibold mb-2">創立新房間</h3>
+
+            <div className="space-y-2">
+              <Label>您的暱稱</Label>
+              <Input
+                placeholder="輸入您的暱稱..."
+                value={creatorName}
+                onChange={(e) => setCreatorName(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label>人數上限: {maxPlayers}</Label>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -79,14 +98,25 @@ const GameStart = () => {
                 </Button>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>房間密碼 (選填)</Label>
+              <Input
+                type="password"
+                placeholder="留空則不設密碼"
+                value={roomPassword}
+                onChange={(e) => setRoomPassword(e.target.value)}
+              />
+            </div>
+
             <Button
               size="lg"
-              className="w-full text-xl py-8 animate-pulse-glow"
+              className="w-full mt-4 animate-pulse-glow"
               onClick={handleCreateRoom}
-              disabled={isCreating}
+              disabled={isCreating || !creatorName.trim()}
             >
               <Plus className="w-6 h-6 mr-2" />
-              {isCreating ? "創建中..." : "創立新房間"}
+              {isCreating ? "創建中..." : "創立並加入"}
             </Button>
           </div>
 

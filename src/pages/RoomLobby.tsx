@@ -3,37 +3,46 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { gameApi, Room } from "@/services/gameApi";
 import { webSocketService } from "@/services/WebSocketService";
-import { Users, Play, Lock } from "lucide-react";
-import { toast } from "sonner";
+import { Users, Lock } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const RoomLobby = () => {
     const navigate = useNavigate();
     const [rooms, setRooms] = useState<Room[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const fetchRooms = async () => {
-        try {
-            const data = await gameApi.getRooms();
-            setRooms(data.rooms);
-        } catch (error) {
-            console.error("Failed to fetch rooms:", error);
-            toast.error("無法獲取房間列表");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+    const [password, setPassword] = useState("");
+    const [playerName, setPlayerName] = useState("");
+    const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
 
     useEffect(() => {
+        const fetchRooms = async () => {
+            try {
+                const data = await gameApi.getRooms();
+                // @ts-ignore
+                setRooms(data.rooms || data);
+            } catch (error) {
+                console.error("Failed to fetch rooms:", error);
+                toast.error("無法獲取房間列表");
+            }
+        };
+
         fetchRooms();
 
-        // Connect to WebSocket lobby channel
         webSocketService.connect("lobby");
         const unsubscribe = webSocketService.subscribe((data) => {
-            if (data.type === "refresh") {
+            if (data.type === "lobby_update") {
                 fetchRooms();
             }
         });
@@ -44,85 +53,111 @@ const RoomLobby = () => {
         };
     }, []);
 
-    const handleJoinRoom = (roomId: number) => {
-        navigate(`/room/${roomId}`);
+    const handleRoomClick = (room: Room) => {
+        setSelectedRoom(room);
+        setPassword("");
+        setPlayerName("");
+        setIsJoinDialogOpen(true);
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "waiting": return "bg-green-500";
-            case "playing": return "bg-yellow-500";
-            case "full": return "bg-red-500";
-            default: return "bg-gray-500";
+    const handleJoinConfirm = async () => {
+        if (!selectedRoom) return;
+        if (!playerName.trim()) {
+            toast.error("請輸入暱稱");
+            return;
         }
-    };
 
-    const getStatusText = (status: string) => {
-        switch (status) {
-            case "waiting": return "等待中";
-            case "playing": return "遊戲中";
-            case "full": return "已滿";
-            default: return "未知";
+        try {
+            const response = await gameApi.joinRoom(selectedRoom.room_id, playerName, false, password);
+            localStorage.setItem(`player_id_${selectedRoom.room_id}`, response.player.id.toString());
+            setIsJoinDialogOpen(false);
+            navigate(`/room/${selectedRoom.room_id}`);
+            toast.success("成功加入房間");
+        } catch (error: any) {
+            toast.error(error.message || "加入失敗");
         }
     };
 
     return (
-        <div className="min-h-screen bg-game-gradient p-4 md:p-8">
-            <div className="max-w-7xl mx-auto space-y-6">
+        <div className="min-h-screen bg-game-gradient p-4 relative">
+            <div className="absolute top-4 right-4">
+                <ThemeToggle />
+            </div>
+            <div className="max-w-4xl mx-auto space-y-6">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-4xl font-bold text-white drop-shadow-lg">遊戲大廳</h1>
-                    <div className="flex items-center gap-4">
-                        <ThemeToggle />
-                        <Button variant="outline" onClick={() => navigate("/")}>返回首頁</Button>
-                    </div>
+                    <h1 className="text-3xl font-bold text-white drop-shadow-md">遊戲大廳</h1>
+                    <Button variant="secondary" onClick={() => navigate("/")}>返回首頁</Button>
                 </div>
 
-                <Card className="bg-white/90 backdrop-blur-sm">
-                    <CardHeader>
-                        <CardTitle>房間列表</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ScrollArea className="h-[70vh] pr-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                {rooms.map((room) => (
-                                    <Card
-                                        key={room.room_id}
-                                        className={`cursor-pointer transition-all hover:scale-105 hover:shadow-lg border-2 ${room.status === 'waiting' ? 'border-green-200 hover:border-green-400' :
-                                            room.status === 'playing' ? 'border-yellow-200 hover:border-yellow-400' :
-                                                'border-red-200 hover:border-red-400'
-                                            }`}
-                                        onClick={() => room.status === 'waiting' && handleJoinRoom(room.room_id)}
-                                    >
-                                        <CardContent className="p-4 flex flex-col items-center justify-center space-y-3">
-                                            <div className="text-2xl font-bold text-gray-700">Room {room.room_id}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {rooms.map((room) => (
+                        <Card
+                            key={room.room_id}
+                            className="hover:shadow-lg transition-all cursor-pointer bg-white/90 dark:bg-card/90 backdrop-blur"
+                            onClick={() => handleRoomClick(room)}
+                        >
+                            <CardHeader className="pb-2">
+                                <CardTitle className="flex justify-between items-center text-lg">
+                                    <span className="truncate">{room.name}</span>
+                                    {room.has_password && <Lock className="w-4 h-4 text-yellow-500" />}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex justify-between items-center text-sm text-muted-foreground mb-2">
+                                    <span>ID: {room.room_id}</span>
+                                    <Badge variant={room.status === 'playing' ? "destructive" : "secondary"}>
+                                        {room.status === 'playing' ? '遊戲中' : '等待中'}
+                                    </Badge>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Users className="w-4 h-4" />
+                                    <span>{room.player_count} / {room.max_players}</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
 
-                                            <Badge className={`${getStatusColor(room.status)} text-white px-3 py-1`}>
-                                                {getStatusText(room.status)}
-                                            </Badge>
-
-                                            <div className="flex items-center space-x-2 text-gray-600">
-                                                <Users className="w-5 h-5" />
-                                                <span className="font-medium">{room.player_count} / {room.max_players}</span>
-                                            </div>
-
-                                            {room.status === 'playing' && (
-                                                <div className="text-xs text-yellow-600 flex items-center">
-                                                    <Play className="w-3 h-3 mr-1" /> 進行中
-                                                </div>
-                                            )}
-                                            {room.status === 'full' && (
-                                                <div className="text-xs text-red-600 flex items-center">
-                                                    <Lock className="w-3 h-3 mr-1" /> 已滿員
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
+                    {rooms.length === 0 && (
+                        <div className="col-span-full text-center py-12 text-white/80">
+                            目前沒有房間，快去創建一個吧！
+                        </div>
+                    )}
+                </div>
             </div>
+
+            <Dialog open={isJoinDialogOpen} onOpenChange={setIsJoinDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>加入房間: {selectedRoom?.name}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>您的暱稱</Label>
+                            <Input
+                                placeholder="輸入暱稱..."
+                                value={playerName}
+                                onChange={(e) => setPlayerName(e.target.value)}
+                            />
+                        </div>
+
+                        {selectedRoom?.has_password && (
+                            <div className="space-y-2">
+                                <Label>房間密碼</Label>
+                                <Input
+                                    type="password"
+                                    placeholder="輸入密碼..."
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsJoinDialogOpen(false)}>取消</Button>
+                        <Button onClick={handleJoinConfirm}>加入</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

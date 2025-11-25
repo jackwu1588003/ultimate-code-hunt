@@ -161,6 +161,8 @@ class Room:
         self.max_players = 5
         self.created_at = datetime.now()
         self.last_activity = datetime.now()
+        self.password: Optional[str] = None
+        self.host_id: Optional[int] = None
 
     def _generate_random_name(self):
         adjectives = ["快樂的", "勇敢的", "神秘的", "幸運的", "瘋狂的", "超級", "無敵", "閃亮", "傳奇", "終極"]
@@ -184,12 +186,15 @@ class Room:
         self.players.append(player)
         if len(self.players) >= self.max_players:
             self.status = RoomStatus.FULL
-
+            
     def remove_player(self, player_id: int):
         self.players = [p for p in self.players if p.id != player_id]
         if self.status == RoomStatus.FULL and len(self.players) < self.max_players:
             self.status = RoomStatus.WAITING
-        # If game is playing, handling leaving is complex. For now assume leaving only in lobby or simple disconnect handling in game.
+        
+        # If host leaves, assign new host if players remain
+        if self.host_id == player_id and self.players:
+            self.host_id = self.players[0].id
 
     def to_dict(self):
         return {
@@ -198,6 +203,8 @@ class Room:
             "status": self.status,
             "player_count": len(self.players),
             "max_players": self.max_players,
+            "has_password": bool(self.password),
+            "host_id": self.host_id,
             "players": [p.dict() for p in self.players],
             "game_id": self.game_id
         }
@@ -568,31 +575,58 @@ async def get_room(room_id: int):
         raise HTTPException(404, "房間不存在")
     return rooms[room_id].to_dict()
 
+from typing import Optional # Added for Optional type hint
+
 class CreateRoomRequest(BaseModel):
     max_players: int = 5
+    password: Optional[str] = None
+    player_name: str
 
 @app.post("/api/rooms/create")
-async def create_room(request: CreateRoomRequest = CreateRoomRequest()):
-    # Generate a random room ID (6 digits)
-    while True:
-        room_id = random.randint(100000, 999999)
-        if room_id not in rooms:
-            break
-    
-    new_room = Room(room_id)
-    # Validate max_players
-    if request.max_players < 2 or request.max_players > 10:
-        raise HTTPException(400, "玩家人數必須在 2 到 10 人之間")
+async def create_room(request: CreateRoomRequest):
+    try:
+        # Generate a random room ID (6 digits)
+        while True:
+            room_id = random.randint(100000, 999999)
+            if room_id not in rooms:
+                break
         
-    new_room.max_players = request.max_players
-    rooms[room_id] = new_room
-    
-    await notify_lobby_update()
-    return new_room.to_dict()
+        new_room = Room(room_id)
+        # Validate max_players
+        if request.max_players < 2 or request.max_players > 10:
+            raise HTTPException(400, "玩家人數必須在 2 到 10 人之間")
+            
+        new_room.max_players = request.max_players
+        new_room.password = request.password
+        
+        # Create host player
+        player_id = int(datetime.now().timestamp() * 1000) % 100000 + random.randint(0, 1000)
+        host_player = Player(
+            id=player_id,
+            name=request.player_name,
+            is_ai=False
+        )
+        
+        new_room.add_player(host_player)
+        new_room.host_id = player_id
+        
+        rooms[room_id] = new_room
+        
+        await notify_lobby_update()
+        
+        return {
+            "room": new_room.to_dict(),
+            "player": host_player.dict()
+        }
+    except Exception as e:
+        with open("backend_error.log", "a") as f:
+            f.write(f"Error creating room: {str(e)}\n")
+        raise e
 
 class JoinRoomRequest(BaseModel):
     player_name: str
     is_ai: bool = False
+    password: Optional[str] = None
 
 @app.post("/api/rooms/{room_id}/join")
 async def join_room(room_id: int, request: JoinRoomRequest):
@@ -600,6 +634,11 @@ async def join_room(room_id: int, request: JoinRoomRequest):
         raise HTTPException(404, "房間不存在")
     
     room = rooms[room_id]
+    
+    # Check password
+    if room.password and not request.is_ai: # AI bypass password? Or host adds AI so it's fine.
+        if request.password != room.password:
+             raise HTTPException(403, "密碼錯誤")
     
     # Generate a simple ID for the player within the room context
     # In a real app, this would be from a user session or DB
