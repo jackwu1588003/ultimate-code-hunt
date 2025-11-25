@@ -8,14 +8,20 @@ import { Badge } from "@/components/ui/badge";
 import { gameApi, Room } from "@/services/gameApi";
 import { webSocketService } from "@/services/WebSocketService";
 import { toast } from "sonner";
-import { User, Bot, LogOut, Play } from "lucide-react";
+import { User, Bot, LogOut, Play, Dices } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
+const generateRandomName = () => {
+    const adjectives = ["快樂的", "勇敢的", "神秘的", "幸運的", "瘋狂的", "超級", "無敵", "閃亮", "傳奇", "終極"];
+    const nouns = ["玩家", "戰士", "法師", "獵人", "忍者", "騎士", "冒險者", "大師", "專家", "新手"];
+    return `${adjectives[Math.floor(Math.random() * adjectives.length)]}${nouns[Math.floor(Math.random() * nouns.length)]}`;
+};
 
 const RoomWaiting = () => {
     const { roomId } = useParams();
     const navigate = useNavigate();
     const [room, setRoom] = useState<Room | null>(null);
-    const [playerName, setPlayerName] = useState("");
+    const [playerName, setPlayerName] = useState(generateRandomName());
     const [isJoined, setIsJoined] = useState(false);
     const [currentPlayerId, setCurrentPlayerId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -168,19 +174,31 @@ const RoomWaiting = () => {
 
                         {/* Controls */}
                         {!isJoined ? (
-                            <div className="flex gap-4 items-center justify-center pt-4 border-t">
-                                <Input
-                                    placeholder="輸入你的暱稱..."
-                                    value={playerName}
-                                    onChange={(e) => setPlayerName(e.target.value)}
-                                    className="max-w-xs"
-                                />
-                                <Button onClick={handleJoin} disabled={isLoading || !playerName.trim()}>
-                                    加入房間
-                                </Button>
-                                <Button variant="outline" onClick={() => navigate("/lobby")}>
-                                    返回大廳
-                                </Button>
+                            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center pt-4 border-t">
+                                <div className="flex gap-2 w-full max-w-xs">
+                                    <Input
+                                        placeholder="輸入你的暱稱..."
+                                        value={playerName}
+                                        onChange={(e) => setPlayerName(e.target.value)}
+                                        className="flex-1"
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setPlayerName(generateRandomName())}
+                                        title="隨機名稱"
+                                    >
+                                        <Dices className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button onClick={handleJoin} disabled={isLoading || !playerName.trim()}>
+                                        加入房間
+                                    </Button>
+                                    <Button variant="outline" onClick={() => navigate("/lobby")}>
+                                        返回大廳
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
                             <div className="flex flex-col gap-4 pt-4 border-t">
