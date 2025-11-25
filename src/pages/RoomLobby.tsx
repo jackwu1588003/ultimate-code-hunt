@@ -8,6 +8,7 @@ import { gameApi, Room } from "@/services/gameApi";
 import { webSocketService } from "@/services/WebSocketService";
 import { Users, Play, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const RoomLobby = () => {
     const navigate = useNavigate();
@@ -70,7 +71,10 @@ const RoomLobby = () => {
             <div className="max-w-7xl mx-auto space-y-6">
                 <div className="flex justify-between items-center">
                     <h1 className="text-4xl font-bold text-white drop-shadow-lg">遊戲大廳</h1>
-                    <Button variant="outline" onClick={() => navigate("/")}>返回首頁</Button>
+                    <div className="flex items-center gap-4">
+                        <ThemeToggle />
+                        <Button variant="outline" onClick={() => navigate("/")}>返回首頁</Button>
+                    </div>
                 </div>
 
                 <Card className="bg-white/90 backdrop-blur-sm">

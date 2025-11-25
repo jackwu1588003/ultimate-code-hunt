@@ -9,6 +9,7 @@ import { gameApi, Room } from "@/services/gameApi";
 import { webSocketService } from "@/services/WebSocketService";
 import { toast } from "sonner";
 import { User, Bot, LogOut, Play } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const RoomWaiting = () => {
     const { roomId } = useParams();
@@ -119,8 +120,11 @@ const RoomWaiting = () => {
     if (!room) return <div className="text-white text-center mt-20">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-game-gradient p-4 flex items-center justify-center">
-            <Card className="w-full max-w-2xl bg-white/95 backdrop-blur">
+        <div className="min-h-screen bg-game-gradient p-4 flex items-center justify-center relative">
+            <div className="absolute top-4 right-4">
+                <ThemeToggle />
+            </div>
+            <Card className="w-full max-w-2xl bg-white/95 backdrop-blur dark:bg-card/95">
                 <CardHeader>
                     <CardTitle className="text-3xl text-center flex items-center justify-center gap-4">
                         <span>Room {roomId}</span>

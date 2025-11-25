@@ -11,6 +11,7 @@ import { gameApi } from "@/services/gameApi";
 import { GameState } from "@/types/game";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const GameBoard = () => {
   const location = useLocation();
@@ -225,9 +226,12 @@ const GameBoard = () => {
                 範圍：{gameState.number_range[0]} - {gameState.number_range[1]}
               </Badge>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">剩餘玩家：</span>
-              <span className="text-xl font-bold text-success">{alivePlayers.length}</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">剩餘玩家：</span>
+                <span className="text-xl font-bold text-success">{alivePlayers.length}</span>
+              </div>
+              <ThemeToggle />
             </div>
           </CardContent>
         </Card>
