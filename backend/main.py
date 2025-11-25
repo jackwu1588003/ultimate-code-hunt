@@ -568,8 +568,11 @@ async def get_room(room_id: int):
         raise HTTPException(404, "房間不存在")
     return rooms[room_id].to_dict()
 
+class CreateRoomRequest(BaseModel):
+    max_players: int = 5
+
 @app.post("/api/rooms/create")
-async def create_room():
+async def create_room(request: CreateRoomRequest = CreateRoomRequest()):
     # Generate a random room ID (6 digits)
     while True:
         room_id = random.randint(100000, 999999)
@@ -577,6 +580,11 @@ async def create_room():
             break
     
     new_room = Room(room_id)
+    # Validate max_players
+    if request.max_players < 2 or request.max_players > 10:
+        raise HTTPException(400, "玩家人數必須在 2 到 10 人之間")
+        
+    new_room.max_players = request.max_players
     rooms[room_id] = new_room
     
     await notify_lobby_update()

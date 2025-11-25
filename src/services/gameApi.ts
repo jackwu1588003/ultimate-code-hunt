@@ -129,9 +129,13 @@ export const gameApi = {
     return response.json();
   },
 
-  async createRoom(): Promise<Room> {
+  async createRoom(maxPlayers: number = 5): Promise<Room> {
     const response = await fetch(`${API_BASE_URL}/rooms/create`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ max_players: maxPlayers }),
     });
     if (!response.ok) throw new Error("Failed to create room");
     return response.json();

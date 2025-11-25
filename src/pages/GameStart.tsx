@@ -14,15 +14,17 @@ const GameStart = () => {
   const [joinRoomId, setJoinRoomId] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
+  const [maxPlayers, setMaxPlayers] = useState(5);
+
   const handleCreateRoom = async () => {
     setIsCreating(true);
     try {
-      const room = await gameApi.createRoom();
+      const room = await gameApi.createRoom(maxPlayers);
       toast.success(`成功創立房間：${room.name}`);
       navigate(`/room/${room.room_id}`);
     } catch (error) {
       console.error("Failed to create room:", error);
-      toast.error("無法創立房間，可能所有房間已滿");
+      toast.error("無法創立房間");
     } finally {
       setIsCreating(false);
     }
@@ -52,15 +54,41 @@ const GameStart = () => {
 
         <CardContent className="space-y-6">
           {/* Create Room */}
-          <Button
-            size="lg"
-            className="w-full text-xl py-8 animate-pulse-glow"
-            onClick={handleCreateRoom}
-            disabled={isCreating}
-          >
-            <Plus className="w-6 h-6 mr-2" />
-            {isCreating ? "創建中..." : "創立新房間"}
-          </Button>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-lg">創立房間 (人數: {maxPlayers})</Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setMaxPlayers(Math.max(2, maxPlayers - 1))}
+                  disabled={maxPlayers <= 2}
+                >
+                  -
+                </Button>
+                <span className="w-4 text-center">{maxPlayers}</span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setMaxPlayers(Math.min(10, maxPlayers + 1))}
+                  disabled={maxPlayers >= 10}
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+            <Button
+              size="lg"
+              className="w-full text-xl py-8 animate-pulse-glow"
+              onClick={handleCreateRoom}
+              disabled={isCreating}
+            >
+              <Plus className="w-6 h-6 mr-2" />
+              {isCreating ? "創建中..." : "創立新房間"}
+            </Button>
+          </div>
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
