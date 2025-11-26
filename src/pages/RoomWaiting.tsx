@@ -81,7 +81,7 @@ const RoomWaiting = () => {
                 // Initial check if game already playing
                 if (data.status === 'playing' && data.game_id) {
                     const gameState = await gameApi.getGameStatus(data.game_id);
-                    navigate("/game", { state: { gameState, roomId } }); // Pass roomId to game
+                    navigate(`/game/${roomId}`, { state: { gameState, roomId } }); // Pass roomId to game
                 }
             } catch (error) {
                 console.error("Failed to fetch room:", error);
@@ -115,7 +115,7 @@ const RoomWaiting = () => {
             } else if (data.type === "game_started") {
                 toast.success("遊戲開始！");
                 const gameState = await gameApi.getGameStatus(data.game_id);
-                navigate("/game", { state: { gameState, roomId } });
+                navigate(`/game/${roomId}`, { state: { gameState, roomId } });
             }
         });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,19 +16,41 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const GameBoard = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { roomId } = useParams(); // Get roomId from URL
   const [gameState, setGameState] = useState<GameState | null>(
     location.state?.gameState || null
   );
-  const roomId = location.state?.roomId;
+  // const roomId = location.state?.roomId; // No longer needed from state
+
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExploding, setIsExploding] = useState(false);
 
   useEffect(() => {
-    if (!gameState) {
-      navigate("/");
-    }
-  }, [gameState, navigate]);
+    const initializeGame = async () => {
+      if (!gameState && roomId) {
+        try {
+          // 1. Get room info to find game_id
+          const roomData = await gameApi.getRoom(parseInt(roomId));
+          if (roomData.game_id) {
+            // 2. Get game state
+            const state = await gameApi.getGameStatus(roomData.game_id);
+            setGameState(state);
+          } else {
+            // Room exists but no game? Redirect to lobby or room waiting
+            navigate(`/room/${roomId}`);
+          }
+        } catch (error) {
+          console.error("Failed to recover game state:", error);
+          navigate("/");
+        }
+      } else if (!gameState && !roomId) {
+        navigate("/");
+      }
+    };
+
+    initializeGame();
+  }, [gameState, roomId, navigate]);
 
   if (!gameState) return null;
 
@@ -95,6 +117,15 @@ const GameBoard = () => {
   // Get local player ID
   const localPlayerId = parseInt(localStorage.getItem(`player_id_${roomId}`) || "0");
   const isMyTurn = currentPlayer?.id === localPlayerId;
+
+  console.log("Debug GameBoard:", {
+    roomId,
+    localPlayerId,
+    currentPlayerId: currentPlayer?.id,
+    isMyTurn,
+    localStorageKey: `player_id_${roomId}`,
+    localStorageValue: localStorage.getItem(`player_id_${roomId}`)
+  });
 
   // Calculate the last called number to enforce consecutive selection
   const lastCalledNumber = gameState.called_numbers.length > 0

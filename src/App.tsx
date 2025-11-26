@@ -25,7 +25,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<GameStart />} />
-            <Route path="/game" element={<GameBoard />} />
+            <Route path="/game/:roomId" element={<GameBoard />} />
             <Route path="/result" element={<GameResult />} />
 
             <Route path="/stats" element={<Stats />} />

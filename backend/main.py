@@ -212,14 +212,22 @@ class Room:
 class GameState:
     def __init__(self, players: List[dict]):
         self.game_id = str(uuid.uuid4())
-        self.players = [
-            Player(
-                id=i, 
+        self.players = []
+        self.ai_manager = {}
+        
+        for i, p in enumerate(players):
+            # Use provided ID or fallback to index
+            p_id = p.get('id', i)
+            self.players.append(Player(
+                id=p_id, 
                 name=p['name'],
                 is_ai=p.get('is_ai', False)
-            ) 
-            for i, p in enumerate(players)
-        ]
+            ))
+            
+            if p.get('is_ai'):
+                difficulty = p.get('difficulty', 'medium')
+                self.ai_manager[p_id] = AIPlayer(p_id, difficulty)
+
         self.current_round = 1
         self.current_player_index = 0
         self.direction = 1
@@ -227,14 +235,7 @@ class GameState:
         self.secret_number = None
         self.number_range = (1, 30)
         self.start_time = datetime.now()
-        self.ai_manager = {}
         self.action_history = []
-        
-        # 創建 AI 玩家
-        for i, p in enumerate(players):
-            if p.get('is_ai'):
-                difficulty = p.get('difficulty', 'medium')
-                self.ai_manager[i] = AIPlayer(i, difficulty)
         
         self._start_round()
         self._save_game_to_db()
@@ -702,7 +703,7 @@ async def start_room_game(room_id: int):
     
     # Create GameState from room players
     # We need to convert Room players (Pydantic models) to dicts expected by GameState
-    player_dicts = [{"name": p.name, "is_ai": p.is_ai, "difficulty": "medium"} for p in room.players]
+    player_dicts = [{"id": p.id, "name": p.name, "is_ai": p.is_ai, "difficulty": "medium"} for p in room.players]
     
     game = GameState(player_dicts)
     
@@ -736,7 +737,7 @@ async def start_game(request: StartGameRequest):
         "game_id": game.game_id,
         "current_round": game.current_round,
         "number_range": game.number_range,
-        "current_player": game.current_player_index,
+        "current_player": game.players[game.current_player_index].id,
         "players": [p.dict() for p in game.players],
         "called_numbers": list(game.called_numbers),
         "direction": game.direction,
@@ -795,18 +796,18 @@ async def call_numbers(request: CallNumbersRequest):
             "hit_secret": True,
             "eliminated_player": request.player_id,
             "game_over": game_over,
-            "next_player": game.current_player_index if not game_over else None,
+            "next_player": game.players[game.current_player_index].id if not game_over else None,
             "called_numbers": list(game.called_numbers),
             "winner": next((p.id for p in game.players if p.is_alive), None) if game_over else None,
             "new_range": game.number_range
         }
     else:
         game.next_player()
-        print(f"Next Player: {game.current_player_index}")
+        print(f"Next Player: {game.players[game.current_player_index].id}")
         return {
             "success": True,
             "hit_secret": False,
-            "next_player": game.current_player_index,
+            "next_player": game.players[game.current_player_index].id,
             "called_numbers": list(game.called_numbers),
             "new_range": game.number_range
         }
@@ -830,7 +831,7 @@ async def use_pass(request: UsePassRequest):
     
     return {
         "success": True,
-        "next_player": game.current_player_index
+        "next_player": game.players[game.current_player_index].id
     }
 
 @app.post("/api/game/reverse")
@@ -854,7 +855,7 @@ async def use_reverse(request: UseReverseRequest):
     return {
         "success": True,
         "new_direction": game.direction,
-        "next_player": game.current_player_index
+        "next_player": game.players[game.current_player_index].id
     }
 
 @app.get("/api/game/status")
@@ -869,7 +870,7 @@ async def get_status(game_id: str):
     return {
         "game_id": game.game_id,
         "current_round": game.current_round,
-        "current_player": game.current_player_index,
+        "current_player": game.players[game.current_player_index].id,
         "number_range": game.number_range,
         "called_numbers": list(game.called_numbers),
         "players": [p.dict() for p in game.players],
