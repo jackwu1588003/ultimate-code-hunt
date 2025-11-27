@@ -31,25 +31,35 @@ const GameBoard = () => {
   const [isExploding, setIsExploding] = useState(false);
   const [recentCall, setRecentCall] = useState<{ playerId: number; numbers: number[] } | null>(null);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const initializeGame = async () => {
+      console.log("GameBoard: initializeGame started", { gameState, roomId });
       if (!gameState && roomId) {
         try {
+          console.log("GameBoard: Fetching room data for roomId:", roomId);
           // 1. Get room info to find game_id
           const roomData = await gameApi.getRoom(parseInt(roomId));
+          console.log("GameBoard: Room data received:", roomData);
+
           if (roomData.game_id) {
+            console.log("GameBoard: Fetching game status for gameId:", roomData.game_id);
             // 2. Get game state
             const state = await gameApi.getGameStatus(roomData.game_id);
+            console.log("GameBoard: Game state received:", state);
             setGameState(state);
           } else {
+            console.log("GameBoard: No game_id in room data, redirecting to room waiting");
             // Room exists but no game? Redirect to lobby or room waiting
             navigate(`/room/${roomId}`);
           }
         } catch (error) {
           console.error("Failed to recover game state:", error);
-          navigate("/");
+          setError("找不到房間或遊戲已結束");
         }
       } else if (!gameState && !roomId) {
+        console.log("GameBoard: No gameState and no roomId, redirecting home");
         navigate("/");
       }
     };
@@ -57,7 +67,35 @@ const GameBoard = () => {
     initializeGame();
   }, [gameState, roomId, navigate]);
 
-  if (!gameState) return null;
+  if (error) {
+    return (
+      <div className="min-h-screen bg-game-gradient flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-destructive text-center text-2xl">錯誤</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-6">
+            <p className="text-lg text-center text-muted-foreground">{error}</p>
+            <Button onClick={() => navigate("/")} size="lg" className="w-full">
+              返回首頁
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!gameState) {
+    return (
+      <div className="min-h-screen bg-game-gradient flex items-center justify-center">
+        <div className="text-white text-xl flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+          <p>正在載入遊戲資訊...</p>
+          <p className="text-sm text-white/60">Room ID: {roomId}</p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!gameState) return;
@@ -118,13 +156,13 @@ const GameBoard = () => {
   useEffect(() => {
     if (!roomId) return;
     webSocketService.connect(`room_${roomId}`);
-        const unsubscribe = webSocketService.subscribe(async (data) => {
+    const unsubscribe = webSocketService.subscribe(async (data) => {
       try {
         if (data.type === "room_update" && data.game) {
           const incoming = data.game as GameState;
 
           // Partial merge: only update state if there are real differences
-              setGameState((prev) => {
+          setGameState((prev) => {
             if (!prev) return incoming;
 
             const shallowEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
@@ -158,35 +196,35 @@ const GameBoard = () => {
               }, 800);
             }
 
-              // Detect newly called numbers so everyone can see who chose which numbers
-              try {
-                const prevCalled = prev.called_numbers || [];
-                const incomingCalled = incoming.called_numbers || [];
-                const newCalled = incomingCalled.filter((n) => !prevCalled.includes(n));
+            // Detect newly called numbers so everyone can see who chose which numbers
+            try {
+              const prevCalled = prev.called_numbers || [];
+              const incomingCalled = incoming.called_numbers || [];
+              const newCalled = incomingCalled.filter((n) => !prevCalled.includes(n));
 
-                // Prefer explicit last_action from server if present
-                const lastAction = (incoming as any).last_action;
-                if (lastAction && lastAction.action_type === "call" && lastAction.numbers && lastAction.numbers.length > 0) {
-                  const actorId = lastAction.player_id;
-                  const actor = incoming.players.find((p) => p.id === actorId) || prev.players.find((p) => p.id === actorId);
-                  const actorName = actor?.name || "玩家";
-                  const numbers = lastAction.numbers as number[];
-                  // show toast and highlight temporarily
-                  toast.info(`${actorName} 選擇了 ${numbers.join(", ")}`);
-                  setRecentCall({ playerId: actorId, numbers });
-                  setTimeout(() => setRecentCall(null), 2500);
-                } else if (newCalled.length > 0) {
-                  // fallback: guess actor as previous current_player
-                  const actorId = prev.current_player;
-                  const actor = incoming.players.find((p) => p.id === actorId) || prev.players.find((p) => p.id === actorId);
-                  const actorName = actor?.name || "玩家";
-                  toast.info(`${actorName} 選擇了 ${newCalled.join(", ")}`);
-                  setRecentCall({ playerId: actorId, numbers: newCalled });
-                  setTimeout(() => setRecentCall(null), 2500);
-                }
-              } catch (e) {
-                // non-fatal
+              // Prefer explicit last_action from server if present
+              const lastAction = (incoming as any).last_action;
+              if (lastAction && lastAction.action_type === "call" && lastAction.numbers && lastAction.numbers.length > 0) {
+                const actorId = lastAction.player_id;
+                const actor = incoming.players.find((p) => p.id === actorId) || prev.players.find((p) => p.id === actorId);
+                const actorName = actor?.name || "玩家";
+                const numbers = lastAction.numbers as number[];
+                // show toast and highlight temporarily
+                toast.info(`${actorName} 選擇了 ${numbers.join(", ")}`);
+                setRecentCall({ playerId: actorId, numbers });
+                setTimeout(() => setRecentCall(null), 2500);
+              } else if (newCalled.length > 0) {
+                // fallback: guess actor as previous current_player
+                const actorId = prev.current_player;
+                const actor = incoming.players.find((p) => p.id === actorId) || prev.players.find((p) => p.id === actorId);
+                const actorName = actor?.name || "玩家";
+                toast.info(`${actorName} 選擇了 ${newCalled.join(", ")}`);
+                setRecentCall({ playerId: actorId, numbers: newCalled });
+                setTimeout(() => setRecentCall(null), 2500);
               }
+            } catch (e) {
+              // non-fatal
+            }
 
             return merged;
           });
@@ -212,6 +250,12 @@ const GameBoard = () => {
 
   const currentPlayer = gameState.players.find((p) => p.id === gameState.current_player);
   const alivePlayers = gameState.players.filter((p) => p.is_alive);
+
+  console.log("GameBoard Render:", {
+    gameState,
+    calledNumbers: gameState.called_numbers,
+    range: gameState.number_range
+  });
 
   // Get local player ID
   const localPlayerId = parseInt(localStorage.getItem(`player_id_${roomId}`) || "0");
@@ -451,16 +495,22 @@ const GameBoard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <NumberGrid
-              range={gameState.number_range}
-              calledNumbers={gameState.called_numbers}
-              selectedNumbers={selectedNumbers}
-              onNumberSelect={handleNumberSelect}
-              disabled={isProcessing || currentPlayer?.is_ai || !isMyTurn}
-              isNumberDisabled={isNumberDisabled}
-              recentCallNumbers={recentCall?.numbers}
-              recentCallPlayerId={recentCall?.playerId}
-            />
+            {gameState.number_range && gameState.number_range.length === 2 ? (
+              <NumberGrid
+                range={gameState.number_range}
+                calledNumbers={gameState.called_numbers || []}
+                selectedNumbers={selectedNumbers}
+                onNumberSelect={handleNumberSelect}
+                disabled={isProcessing || currentPlayer?.is_ai || !isMyTurn}
+                isNumberDisabled={isNumberDisabled}
+                recentCallNumbers={recentCall?.numbers}
+                recentCallPlayerId={recentCall?.playerId}
+              />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                正在載入號碼盤...
+              </div>
+            )}
           </CardContent>
         </Card>
 

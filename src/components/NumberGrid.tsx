@@ -13,18 +13,20 @@ interface NumberGridProps {
 }
 
 export const NumberGrid = ({
-  range,
-  calledNumbers,
-  selectedNumbers,
+  range = [1, 100],
+  calledNumbers = [],
+  selectedNumbers = [],
   onNumberSelect,
   disabled = false,
   isNumberDisabled,
+  recentCallNumbers = [],
 }: NumberGridProps) => {
-  const [min, max] = range;
-  const numbers = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  console.log("NumberGrid Render:", { range, calledNumbers, selectedNumbers });
+  const [min, max] = range || [1, 100];
+  const numbers = Array.from({ length: (max || 100) - (min || 1) + 1 }, (_, i) => (min || 1) + i);
 
-  const isNumberCalled = (num: number) => calledNumbers.includes(num);
-  const isNumberSelected = (num: number) => selectedNumbers.includes(num);
+  const isNumberCalled = (num: number) => Array.isArray(calledNumbers) && calledNumbers.includes(num);
+  const isNumberSelected = (num: number) => Array.isArray(selectedNumbers) && selectedNumbers.includes(num);
 
   return (
     <div className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3 p-3">
@@ -32,13 +34,12 @@ export const NumberGrid = ({
         const isCalled = isNumberCalled(num);
         const isSelected = isNumberSelected(num);
         const isDisabled = disabled || isCalled || (isNumberDisabled ? isNumberDisabled(num) : false);
-        const isRecent = recentCallNumbers ? recentCallNumbers.includes(num) : false;
+        const isRecent = Array.isArray(recentCallNumbers) && recentCallNumbers.includes(num);
 
         return (
           <Button
             key={num}
             variant={isSelected ? "default" : isCalled ? "secondary" : "outline"}
-            // Use icon size as a base to avoid large horizontal padding from `lg`
             size="icon"
             disabled={isDisabled}
             onClick={() => onNumberSelect(num)}
