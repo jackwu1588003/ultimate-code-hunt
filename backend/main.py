@@ -236,6 +236,7 @@ class GameState:
         self.number_range = (1, 30)
         self.start_time = datetime.now()
         self.action_history = []
+        self.hints = []  # 新增提示列表
         
         self._start_round()
         self._save_game_to_db()
@@ -351,6 +352,76 @@ class GameState:
         conn.commit()
         conn.close()
     
+    def _is_prime(self, n: int) -> bool:
+        """判斷是否為質數"""
+        if n < 2:
+            return False
+        if n == 2:
+            return True
+        if n % 2 == 0:
+            return False
+        for i in range(3, int(n ** 0.5) + 1, 2):
+            if n % i == 0:
+                return False
+        return True
+    
+    def generate_hints(self) -> List[str]:
+        """根據爆掉數字生成提示(最多2個)"""
+        num = self.secret_number
+        player_count = len(self.players)
+        all_hints = []
+        
+        # 1. 2的倍數
+        if num % 2 == 0:
+            all_hints.append("2的倍數")
+        
+        # 2. 3的倍數
+        if num % 3 == 0:
+            all_hints.append("3的倍數")
+        
+        # 3. 5的倍數
+        if num % 5 == 0:
+            all_hints.append("5的倍數")
+        
+        # 4. 7的倍數
+        if num % 7 == 0:
+            all_hints.append("7的倍數")
+        
+        # 5. 質數
+        if self._is_prime(num):
+            all_hints.append("質數")
+        
+        # 6. 爆掉數字含有1或2
+        if '1' in str(num) or '2' in str(num):
+            all_hints.append("數字含有1或2")
+        
+        # 7. 2跟3的公倍數 (6的倍數)
+        if num % 6 == 0:
+            all_hints.append("2跟3的公倍數")
+        
+        # 8. 爆掉數字+1為4的倍數
+        if (num + 1) % 4 == 0:
+            all_hints.append("爆掉數字+1為4的倍數")
+        
+        # 9. 15以內的數字
+        if num <= 15:
+            all_hints.append("15以內的數字")
+        
+        # 10. 爆掉數字為玩家人數+1或-1的倍數
+        if player_count > 1:
+            if num % (player_count + 1) == 0:
+                all_hints.append(f"玩家人數+1的倍數({player_count + 1}的倍數)")
+            elif num % (player_count - 1) == 0 and player_count > 2:
+                all_hints.append(f"玩家人數-1的倍數({player_count - 1}的倍數)")
+        
+        # 隨機選擇最多2個提示
+        if len(all_hints) > 2:
+            selected_hints = random.sample(all_hints, 2)
+        else:
+            selected_hints = all_hints
+        
+        return selected_hints
+    
     def _start_round(self):
         if self.current_round == 1:
             self.number_range = (1, 30)
@@ -362,12 +433,15 @@ class GameState:
         self.secret_number = random.randint(*self.number_range)
         self.called_numbers.clear()
         
+        # 生成本輪提示
+        self.hints = self.generate_hints()
+        
         for player in self.players:
             if player.is_alive:
                 player.pass_available = True
                 player.reverse_available = True
         
-        print(f"[Round {self.current_round}] 密碼: {self.secret_number}")
+        print(f"[Round {self.current_round}] 密碼: {self.secret_number}, 提示: {self.hints}")
     
     def get_current_player(self) -> Player:
         return self.players[self.current_player_index]
@@ -543,6 +617,7 @@ async def notify_room_update(room_id: int, room: Room):
             "players": [p.dict() for p in game.players],
             "direction": game.direction,
             "game_over": len([p for p in game.players if p.is_alive]) <= 1,
+            "hints": game.hints,  # 添加提示
         }
 
     await manager.broadcast_room(room_id, payload)
@@ -758,7 +833,8 @@ async def start_game(request: StartGameRequest):
         "called_numbers": list(game.called_numbers),
         "direction": game.direction,
         "game_over": False,
-        "winner": None
+        "winner": None,
+        "hints": game.hints  # 添加提示
     }
 
 @app.post("/api/game/call")
@@ -931,7 +1007,8 @@ async def get_status(game_id: str):
         "players": [p.dict() for p in game.players],
         "direction": game.direction,
         "game_over": game_over,
-        "winner": alive_players[0].id if game_over else None
+        "winner": alive_players[0].id if game_over else None,
+        "hints": game.hints  # 添加提示
     }
 
 @app.post("/api/game/ai-action")

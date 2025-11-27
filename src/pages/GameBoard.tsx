@@ -367,6 +367,31 @@ const GameBoard = () => {
           </CardContent>
         </Card>
 
+        {/* Hints Section */}
+        {gameState.hints && gameState.hints.length > 0 && (
+          <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-2 border-blue-200 dark:border-blue-800">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">💡</div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-muted-foreground mb-2">遊戲提示</div>
+                  <div className="flex flex-wrap gap-2">
+                    {gameState.hints.map((hint, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="text-base px-3 py-1.5 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-sm"
+                      >
+                        {hint}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Current Player Card */}
         {currentPlayer && (
           <div className="animate-slide-up">

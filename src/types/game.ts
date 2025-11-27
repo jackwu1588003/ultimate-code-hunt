@@ -17,6 +17,7 @@ export interface GameState {
   direction: number;
   game_over: boolean;
   winner?: number;
+  hints?: string[]; // 遊戲提示
 }
 
 export interface PlayerConfig {
