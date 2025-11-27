@@ -9,6 +9,7 @@ import json
 from datetime import datetime
 from enum import Enum
 import asyncio
+import traceback
 
 app = FastAPI(title="終極密碼遊戲 API v2")
 
@@ -572,7 +573,9 @@ class ConnectionManager:
         for connection in self.lobby_connections:
             try:
                 await connection.send_json(message)
-            except:
+            except Exception as e:
+                print(f"Error broadcasting to lobby: {e}")
+                # traceback.print_exc()
                 pass # Handle disconnected clients
 
     async def broadcast_room(self, room_id: int, message: dict):
@@ -580,7 +583,9 @@ class ConnectionManager:
             for connection in self.room_connections[room_id]:
                 try:
                     await connection.send_json(message)
-                except:
+                except Exception as e:
+                    print(f"Error broadcasting to room {room_id}: {e}")
+                    traceback.print_exc()
                     pass
 
 manager = ConnectionManager()
@@ -618,6 +623,7 @@ async def notify_room_update(room_id: int, room: Room):
     # If the room has an active game, include game state in the broadcast so
     # in-game clients can sync without extra polling.
     payload = {"type": "room_update", "room": room.to_dict()}
+    print(f"Broadcasting update for room {room_id}, has_game={bool(room.game_id)}")
     if room.game_id and room.game_id in games:
         game = games.get(room.game_id)
         payload["game"] = {
