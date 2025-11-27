@@ -12,6 +12,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const GameStart = () => {
   const navigate = useNavigate();
   const [joinRoomId, setJoinRoomId] = useState("");
+  const [joinRoomPassword, setJoinRoomPassword] = useState("");
+  const [showJoinPasswordField, setShowJoinPasswordField] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const [maxPlayers, setMaxPlayers] = useState(5);
@@ -49,7 +51,34 @@ const GameStart = () => {
       toast.error("請輸入房間號碼");
       return;
     }
-    navigate(`/room/${joinRoomId}`);
+
+    const tryNavigate = async () => {
+      try {
+        const room = await gameApi.getRoom(parseInt(joinRoomId));
+        if (room.has_password) {
+          // show password input to the user
+          setShowJoinPasswordField(true);
+          return;
+        }
+
+        navigate(`/room/${joinRoomId}`);
+      } catch (e) {
+        console.error("Failed to fetch room:", e);
+        toast.error("找不到該房間");
+      }
+    };
+
+    if (!showJoinPasswordField) {
+      tryNavigate();
+    } else {
+      // If password field is already visible, proceed to room and pass password in state
+      if (!joinRoomPassword) {
+        toast.error("此房間需要密碼，請輸入密碼");
+        return;
+      }
+
+      navigate(`/room/${joinRoomId}`, { state: { initialPassword: joinRoomPassword } });
+    }
   };
 
   return (
@@ -158,10 +187,24 @@ const GameStart = () => {
                 type="number"
                 className="text-lg"
               />
-              <Button size="lg" onClick={handleJoinRoom}>
+                <Button size="lg" onClick={handleJoinRoom}>
                 <Play className="w-5 h-5" />
               </Button>
             </div>
+              {showJoinPasswordField && (
+                <div className="mt-3">
+                  <Label>房間密碼</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="password"
+                      placeholder="輸入房間密碼"
+                      value={joinRoomPassword}
+                      onChange={(e) => setJoinRoomPassword(e.target.value)}
+                    />
+                    <Button size="lg" onClick={handleJoinRoom}>確認</Button>
+                  </div>
+                </div>
+              )}
           </div>
 
           {/* Browse Rooms */}

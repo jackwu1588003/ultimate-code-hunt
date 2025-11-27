@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,8 @@ const RoomWaiting = () => {
     const [currentPlayerId, setCurrentPlayerId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isHost, setIsHost] = useState(false);
+    const location = useLocation();
+    const [joinPasswordPrefill, setJoinPasswordPrefill] = useState<string | null>(null);
 
     // Refs for WebSocket callback to access current state
     const isJoinedRef = useRef(isJoined);
@@ -41,6 +43,15 @@ const RoomWaiting = () => {
             setIsHost(room.host_id === currentPlayerId);
         }
     }, [room, currentPlayerId]);
+
+    // If navigated with an initialPassword (from GameStart), prefill and open join dialog
+    useEffect(() => {
+        const state: any = location.state;
+        if (state && state.initialPassword) {
+            setJoinPasswordPrefill(state.initialPassword);
+            setIsJoinDialogOpen(true);
+        }
+    }, [location]);
 
     const handleUpdateSettings = async (newMaxPlayers: number) => {
         if (!room || !isHost) return;
@@ -131,10 +142,16 @@ const RoomWaiting = () => {
             return;
         }
         if (!roomId) return;
-
         setIsLoading(true);
         try {
-            const response = await gameApi.joinRoom(parseInt(roomId), playerName);
+            if (room.has_password && !(joinPasswordPrefill && joinPasswordPrefill.length > 0)) {
+                toast.error("此房間需要密碼，請輸入密碼");
+                setIsLoading(false);
+                return;
+            }
+
+            const passwordToUse = joinPasswordPrefill ?? undefined;
+            const response = await gameApi.joinRoom(parseInt(roomId), playerName, false, passwordToUse);
             setIsJoined(true);
             setCurrentPlayerId(response.player.id);
             setRoom(response.room);
@@ -143,7 +160,7 @@ const RoomWaiting = () => {
             toast.success("成功加入房間！");
         } catch (error) {
             console.error("Failed to join:", error);
-            toast.error("加入房間失敗");
+            toast.error(error.message || "加入房間失敗");
         } finally {
             setIsLoading(false);
         }
@@ -283,6 +300,18 @@ const RoomWaiting = () => {
                                     <Dices className="w-4 h-4" />
                                 </Button>
                             </div>
+                            {/* If room has password, show password input (prefilled if provided) */}
+                            {room.has_password && (
+                                <div className="flex gap-2 w-full max-w-xs mt-2">
+                                    <Input
+                                        placeholder="房間密碼"
+                                        type="password"
+                                        value={joinPasswordPrefill ?? ''}
+                                        onChange={(e) => setJoinPasswordPrefill(e.target.value)}
+                                        className="flex-1"
+                                    />
+                                </div>
+                            )}
                             <div className="flex gap-2">
                                 <Button onClick={handleJoin} disabled={isLoading || !playerName.trim()}>
                                     加入房間
