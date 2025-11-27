@@ -14,6 +14,9 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+// 顯示爆炸動畫的持續時間（毫秒）
+const EXPLOSION_DURATION_MS = 3000;
+
 const GameBoard = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -75,7 +78,7 @@ const GameBoard = () => {
             toast.error(`💥 踩雷了！${currentPlayer.name} 被淘汰！`, {
               duration: 3000,
             });
-            setTimeout(() => setIsExploding(false), 600);
+            setTimeout(() => setIsExploding(false), EXPLOSION_DURATION_MS);
           } else if ('action' in response && response.action === 'pass') { // Note: Backend response might need normalization or check specific fields
             toast.success(`${currentPlayer.name} 使用了 Pass！`);
           } else if ('new_direction' in response) {
@@ -114,13 +117,13 @@ const GameBoard = () => {
   useEffect(() => {
     if (!roomId) return;
     webSocketService.connect(`room_${roomId}`);
-    const unsubscribe = webSocketService.subscribe(async (data) => {
+        const unsubscribe = webSocketService.subscribe(async (data) => {
       try {
         if (data.type === "room_update" && data.game) {
           const incoming = data.game as GameState;
 
           // Partial merge: only update state if there are real differences
-          setGameState((prev) => {
+              setGameState((prev) => {
             if (!prev) return incoming;
 
             const shallowEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
@@ -152,6 +155,22 @@ const GameBoard = () => {
               setTimeout(() => {
                 navigate("/result", { state: { gameState: merged, roomId } });
               }, 800);
+            }
+
+            // Detect newly called numbers so everyone can see who chose which numbers
+            try {
+              const prevCalled = prev.called_numbers || [];
+              const incomingCalled = incoming.called_numbers || [];
+              const newCalled = incomingCalled.filter((n) => !prevCalled.includes(n));
+              if (newCalled.length > 0) {
+                // The player who acted is likely the previous current_player
+                const actorId = prev.current_player;
+                const actor = incoming.players.find((p) => p.id === actorId) || prev.players.find((p) => p.id === actorId);
+                const actorName = actor?.name || "玩家";
+                toast.info(`${actorName} 選擇了 ${newCalled.join(", ")}`);
+              }
+            } catch (e) {
+              // non-fatal
             }
 
             return merged;
@@ -267,7 +286,7 @@ const GameBoard = () => {
 
         setTimeout(() => {
           setIsExploding(false);
-        }, 600);
+        }, EXPLOSION_DURATION_MS);
       } else {
         toast.success("安全！");
       }
@@ -469,7 +488,12 @@ const GameBoard = () => {
         {/* Explosion Effect Overlay */}
         {isExploding && (
           <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50">
-            <div className="text-9xl animate-explode">💥</div>
+            {/* 使用 gif 替代原本的爆炸符號 */}
+            <img
+              src="/images/121750.gif"
+              alt="爆炸"
+              className="w-56 h-56 object-contain animate-explode"
+            />
           </div>
         )}
       </div>
