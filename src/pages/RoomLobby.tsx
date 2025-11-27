@@ -153,8 +153,10 @@ const RoomLobby = () => {
                         )}
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsJoinDialogOpen(false)}>取消</Button>
-                        <Button onClick={handleJoinConfirm}>加入</Button>
+                        <div className="w-full flex flex-col sm:flex-row gap-2">
+                            <Button variant="outline" onClick={() => setIsJoinDialogOpen(false)} className="w-full sm:w-auto">取消</Button>
+                            <Button onClick={handleJoinConfirm} className="w-full sm:w-auto">加入</Button>
+                        </div>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
