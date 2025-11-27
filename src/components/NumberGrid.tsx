@@ -8,6 +8,8 @@ interface NumberGridProps {
   onNumberSelect: (number: number) => void;
   disabled?: boolean;
   isNumberDisabled?: (number: number) => boolean;
+  recentCallNumbers?: number[];
+  recentCallPlayerId?: number;
 }
 
 export const NumberGrid = ({
@@ -30,6 +32,7 @@ export const NumberGrid = ({
         const isCalled = isNumberCalled(num);
         const isSelected = isNumberSelected(num);
         const isDisabled = disabled || isCalled || (isNumberDisabled ? isNumberDisabled(num) : false);
+        const isRecent = recentCallNumbers ? recentCallNumbers.includes(num) : false;
 
         return (
           <Button
@@ -45,7 +48,8 @@ export const NumberGrid = ({
               // Selected / called / default visual tweaks for better mobile appearance
               isSelected && "bg-warning hover:bg-warning/90 animate-bounce-in ring-2 ring-warning",
               isCalled && "cursor-not-allowed opacity-50 bg-muted/10",
-              !isCalled && !isSelected && "bg-white/60 dark:bg-gray-800/60 hover:scale-105",
+              isRecent && !isCalled && "ring-2 ring-primary/60 bg-primary/10 animate-pulse",
+              !isCalled && !isSelected && !isRecent && "bg-white/60 dark:bg-gray-800/60 hover:scale-105",
               "border border-white/10"
             )}
           >

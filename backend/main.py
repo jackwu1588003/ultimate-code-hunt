@@ -298,6 +298,18 @@ class GameState:
         
         conn.commit()
         conn.close()
+        # Append to in-memory action history for quick access and broadcasts
+        try:
+            entry = {
+                "player_id": player_id,
+                "action_type": action_type,
+                "numbers": numbers or [],
+                "hit_secret": bool(hit_secret),
+                "timestamp": datetime.now().isoformat(),
+            }
+            self.action_history.append(entry)
+        except Exception as e:
+            print(f"Failed to append action to history: {e}")
     
     def _update_game_end(self, winner_id: int):
         """更新遊戲結束資訊"""
@@ -619,6 +631,15 @@ async def notify_room_update(room_id: int, room: Room):
             "game_over": len([p for p in game.players if p.is_alive]) <= 1,
             "hints": game.hints,  # 添加提示
         }
+
+        # include last action (if any) so clients can show transient highlights
+        try:
+            if hasattr(game, 'action_history') and len(game.action_history) > 0:
+                payload['game']['last_action'] = game.action_history[-1]
+            else:
+                payload['game']['last_action'] = None
+        except Exception as e:
+            print(f"Failed to attach last_action to payload: {e}")
 
     await manager.broadcast_room(room_id, payload)
     await notify_lobby_update() # Lobby also needs to know status changed

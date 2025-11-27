@@ -29,6 +29,7 @@ const GameBoard = () => {
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExploding, setIsExploding] = useState(false);
+  const [recentCall, setRecentCall] = useState<{ playerId: number; numbers: number[] } | null>(null);
 
   useEffect(() => {
     const initializeGame = async () => {
@@ -157,21 +158,35 @@ const GameBoard = () => {
               }, 800);
             }
 
-            // Detect newly called numbers so everyone can see who chose which numbers
-            try {
-              const prevCalled = prev.called_numbers || [];
-              const incomingCalled = incoming.called_numbers || [];
-              const newCalled = incomingCalled.filter((n) => !prevCalled.includes(n));
-              if (newCalled.length > 0) {
-                // The player who acted is likely the previous current_player
-                const actorId = prev.current_player;
-                const actor = incoming.players.find((p) => p.id === actorId) || prev.players.find((p) => p.id === actorId);
-                const actorName = actor?.name || "玩家";
-                toast.info(`${actorName} 選擇了 ${newCalled.join(", ")}`);
+              // Detect newly called numbers so everyone can see who chose which numbers
+              try {
+                const prevCalled = prev.called_numbers || [];
+                const incomingCalled = incoming.called_numbers || [];
+                const newCalled = incomingCalled.filter((n) => !prevCalled.includes(n));
+
+                // Prefer explicit last_action from server if present
+                const lastAction = (incoming as any).last_action;
+                if (lastAction && lastAction.action_type === "call" && lastAction.numbers && lastAction.numbers.length > 0) {
+                  const actorId = lastAction.player_id;
+                  const actor = incoming.players.find((p) => p.id === actorId) || prev.players.find((p) => p.id === actorId);
+                  const actorName = actor?.name || "玩家";
+                  const numbers = lastAction.numbers as number[];
+                  // show toast and highlight temporarily
+                  toast.info(`${actorName} 選擇了 ${numbers.join(", ")}`);
+                  setRecentCall({ playerId: actorId, numbers });
+                  setTimeout(() => setRecentCall(null), 2500);
+                } else if (newCalled.length > 0) {
+                  // fallback: guess actor as previous current_player
+                  const actorId = prev.current_player;
+                  const actor = incoming.players.find((p) => p.id === actorId) || prev.players.find((p) => p.id === actorId);
+                  const actorName = actor?.name || "玩家";
+                  toast.info(`${actorName} 選擇了 ${newCalled.join(", ")}`);
+                  setRecentCall({ playerId: actorId, numbers: newCalled });
+                  setTimeout(() => setRecentCall(null), 2500);
+                }
+              } catch (e) {
+                // non-fatal
               }
-            } catch (e) {
-              // non-fatal
-            }
 
             return merged;
           });
@@ -443,6 +458,8 @@ const GameBoard = () => {
               onNumberSelect={handleNumberSelect}
               disabled={isProcessing || currentPlayer?.is_ai || !isMyTurn}
               isNumberDisabled={isNumberDisabled}
+              recentCallNumbers={recentCall?.numbers}
+              recentCallPlayerId={recentCall?.playerId}
             />
           </CardContent>
         </Card>
