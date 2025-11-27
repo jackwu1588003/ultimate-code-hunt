@@ -119,7 +119,7 @@ const GameStart = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <Label>人數上限: {maxPlayers}</Label>
               <div className="flex items-center gap-2">
                 <Button
@@ -142,7 +142,7 @@ const GameStart = () => {
                   +
                 </Button>
               </div>
-            </div>
+            </div> */}
 
             {/* <div className="space-y-2">
               <Label>房間密碼 (選填)</Label>

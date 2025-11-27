@@ -146,6 +146,7 @@ class Player(BaseModel):
     is_alive: bool = True
     pass_available: bool = True
     reverse_available: bool = True
+    uuid: Optional[str] = None
 
 class RoomStatus(str, Enum):
     WAITING = "waiting"
@@ -700,6 +701,7 @@ class CreateRoomRequest(BaseModel):
     max_players: int = 5
     password: Optional[str] = None
     player_name: str
+    player_uuid: Optional[str] = None
 
 @app.post("/api/rooms/create")
 async def create_room(request: CreateRoomRequest):
@@ -723,7 +725,8 @@ async def create_room(request: CreateRoomRequest):
         host_player = Player(
             id=player_id,
             name=request.player_name,
-            is_ai=False
+            is_ai=False,
+            uuid=request.player_uuid
         )
         
         new_room.add_player(host_player)
@@ -746,6 +749,7 @@ class JoinRoomRequest(BaseModel):
     player_name: str
     is_ai: bool = False
     password: Optional[str] = None
+    player_uuid: Optional[str] = None
 
 @app.post("/api/rooms/{room_id}/join")
 async def join_room(room_id: int, request: JoinRoomRequest):
@@ -759,6 +763,18 @@ async def join_room(room_id: int, request: JoinRoomRequest):
         if request.password != room.password:
              raise HTTPException(403, "密碼錯誤")
     
+    # Check if player with same UUID exists (Reconnection)
+    if request.player_uuid:
+        existing_player = next((p for p in room.players if p.uuid == request.player_uuid), None)
+        if existing_player:
+            # Update name if changed? Or keep old name? Let's keep old name for consistency or update it.
+            # existing_player.name = request.player_name 
+            return {
+                "success": True,
+                "player": existing_player.dict(),
+                "room": room.to_dict()
+            }
+
     # Generate a simple ID for the player within the room context
     # In a real app, this would be from a user session or DB
     player_id = int(datetime.now().timestamp() * 1000) % 100000 + random.randint(0, 1000)
@@ -766,7 +782,8 @@ async def join_room(room_id: int, request: JoinRoomRequest):
     new_player = Player(
         id=player_id,
         name=request.player_name,
-        is_ai=request.is_ai
+        is_ai=request.is_ai,
+        uuid=request.player_uuid
     )
     
     room.add_player(new_player)

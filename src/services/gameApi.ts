@@ -35,6 +35,16 @@ if (API_BASE_URL && !API_BASE_URL.endsWith('/api')) {
   API_BASE_URL = API_BASE_URL.replace(/\/$/, '') + '/api';
 }
 
+// Helper to get or generate player UUID
+const getPlayerUUID = (): string => {
+  let uuid = localStorage.getItem('player_uuid');
+  if (!uuid) {
+    uuid = crypto.randomUUID();
+    localStorage.setItem('player_uuid', uuid);
+  }
+  return uuid;
+};
+
 export const gameApi = {
   async startGame(request: StartGameRequest): Promise<StartGameResponse> {
     const response = await fetch(`${API_BASE_URL}/game/start`, {
@@ -140,7 +150,8 @@ export const gameApi = {
       body: JSON.stringify({
         max_players: maxPlayers,
         password: password || null,
-        player_name: playerName
+        player_name: playerName,
+        player_uuid: getPlayerUUID()
       }),
     });
     if (!response.ok) throw new Error("Failed to create room");
@@ -156,7 +167,8 @@ export const gameApi = {
       body: JSON.stringify({
         player_name: playerName,
         is_ai: isAi,
-        password: password || null
+        password: password || null,
+        player_uuid: isAi ? undefined : getPlayerUUID()
       }),
     });
     if (!response.ok) {
