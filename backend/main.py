@@ -752,10 +752,11 @@ async def call_numbers(request: CallNumbersRequest):
         raise HTTPException(404, "遊戲不存在")
     
     numbers = request.numbers
-    print(f"Call Request: player={request.player_id}, current={game.current_player_index}, numbers={numbers}")
-    
-    if request.player_id != game.current_player_index:
-        print(f"Turn Mismatch: req={request.player_id} != curr={game.current_player_index}")
+    # Compare player id with the current player's id (not the index)
+    current_player = game.get_current_player()
+    print(f"Call Request: player={request.player_id}, current_player_id={current_player.id}, numbers={numbers}")
+    if request.player_id != current_player.id:
+        print(f"Turn Mismatch: req={request.player_id} != curr={current_player.id}")
         raise HTTPException(400, "不是你的回合")
     
     if len(numbers) < 1 or len(numbers) > 3:
@@ -818,10 +819,12 @@ async def use_pass(request: UsePassRequest):
     if not game:
         raise HTTPException(404, "遊戲不存在")
     
-    if request.player_id != game.current_player_index:
+    # Ensure the request is from the current player (compare ids)
+    current_player = game.get_current_player()
+    if request.player_id != current_player.id:
         raise HTTPException(400, "不是你的回合")
-    
-    player = game.get_current_player()
+
+    player = current_player
     if not player.pass_available:
         raise HTTPException(400, "Pass 已經使用過了")
     
@@ -840,10 +843,12 @@ async def use_reverse(request: UseReverseRequest):
     if not game:
         raise HTTPException(404, "遊戲不存在")
     
-    if request.player_id != game.current_player_index:
+    # Ensure the request is from the current player (compare ids)
+    current_player = game.get_current_player()
+    if request.player_id != current_player.id:
         raise HTTPException(400, "不是你的回合")
-    
-    player = game.get_current_player()
+
+    player = current_player
     if not player.reverse_available:
         raise HTTPException(400, "迴轉已經使用過了")
     
