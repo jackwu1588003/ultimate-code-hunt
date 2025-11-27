@@ -52,33 +52,33 @@ const GameStart = () => {
       return;
     }
 
-    const tryNavigate = async () => {
+    const doJoin = async () => {
+      setIsCreating(true);
       try {
         const room = await gameApi.getRoom(parseInt(joinRoomId));
-        if (room.has_password) {
-          // show password input to the user
+
+        if (room.has_password && !joinRoomPassword) {
+          // Ask user to input password first
           setShowJoinPasswordField(true);
+          setIsCreating(false);
           return;
         }
 
+        const playerName = creatorName.trim() || generateRandomName();
+        const resp = await gameApi.joinRoom(parseInt(joinRoomId), playerName, false, joinRoomPassword || undefined);
+        // Save session and navigate into room
+        localStorage.setItem(`player_id_${joinRoomId}`, resp.player.id.toString());
+        toast.success("成功加入房間");
         navigate(`/room/${joinRoomId}`);
-      } catch (e) {
-        console.error("Failed to fetch room:", e);
-        toast.error("找不到該房間");
+      } catch (e: any) {
+        console.error("Join failed:", e);
+        toast.error(e?.message || "加入房間失敗");
+      } finally {
+        setIsCreating(false);
       }
     };
 
-    if (!showJoinPasswordField) {
-      tryNavigate();
-    } else {
-      // If password field is already visible, proceed to room and pass password in state
-      if (!joinRoomPassword) {
-        toast.error("此房間需要密碼，請輸入密碼");
-        return;
-      }
-
-      navigate(`/room/${joinRoomId}`, { state: { initialPassword: joinRoomPassword } });
-    }
+    doJoin();
   };
 
   return (
@@ -179,32 +179,37 @@ const GameStart = () => {
           {/* Join Room */}
           <div className="space-y-3">
             <Label className="text-lg">加入現有房間</Label>
-            <div className="flex gap-2">
+
+            {/* Main input + button: stack on mobile, inline on sm+ */}
+            <div className="flex flex-col sm:flex-row gap-2 w-full items-stretch">
               <Input
                 placeholder="輸入房間號碼"
                 value={joinRoomId}
                 onChange={(e) => setJoinRoomId(e.target.value)}
                 type="number"
-                className="text-lg"
+                className="text-lg flex-1"
               />
-                <Button size="lg" onClick={handleJoinRoom}>
+
+              <Button size="lg" className="w-full sm:w-auto" onClick={handleJoinRoom}>
                 <Play className="w-5 h-5" />
               </Button>
             </div>
-              {showJoinPasswordField && (
-                <div className="mt-3">
-                  <Label>房間密碼</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="password"
-                      placeholder="輸入房間密碼"
-                      value={joinRoomPassword}
-                      onChange={(e) => setJoinRoomPassword(e.target.value)}
-                    />
-                    <Button size="lg" onClick={handleJoinRoom}>確認</Button>
-                  </div>
+
+            {showJoinPasswordField && (
+              <div className="mt-2">
+                <Label>房間密碼</Label>
+                <div className="flex flex-col sm:flex-row gap-2 w-full items-stretch">
+                  <Input
+                    type="password"
+                    placeholder="輸入房間密碼"
+                    value={joinRoomPassword}
+                    onChange={(e) => setJoinRoomPassword(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button size="lg" className="w-full sm:w-auto" onClick={handleJoinRoom}>確認</Button>
                 </div>
-              )}
+              </div>
+            )}
           </div>
 
           {/* Browse Rooms */}
