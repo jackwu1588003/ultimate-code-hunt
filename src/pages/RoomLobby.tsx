@@ -45,7 +45,7 @@ const RoomLobby = () => {
             if (data.type === "lobby_update") {
                 fetchRooms();
             }
-        });
+        }, "lobby");
 
         return () => {
             unsubscribe();

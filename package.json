@@ -9,6 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
+    ,
+    "test:ws": "node scripts/ws_listen.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

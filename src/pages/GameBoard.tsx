@@ -9,6 +9,7 @@ import { PlayerList } from "@/components/PlayerList";
 import { CircleSlash, RotateCcw, ArrowRight } from "lucide-react";
 import { gameApi } from "@/services/gameApi";
 import { GameState } from "@/types/game";
+import { webSocketService } from "@/services/WebSocketService";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -108,6 +109,70 @@ const GameBoard = () => {
       performAiAction();
     }
   }, [gameState?.current_player, gameState?.game_id]); // Only trigger when current player changes
+
+  // Subscribe to room WebSocket updates so this board updates in real-time
+  useEffect(() => {
+    if (!roomId) return;
+    webSocketService.connect(`room_${roomId}`);
+    const unsubscribe = webSocketService.subscribe(async (data) => {
+      try {
+        if (data.type === "room_update" && data.game) {
+          const incoming = data.game as GameState;
+
+          // Partial merge: only update state if there are real differences
+          setGameState((prev) => {
+            if (!prev) return incoming;
+
+            const shallowEqual = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
+
+            const calledEqual = shallowEqual(prev.called_numbers, incoming.called_numbers);
+            const playersEqual = shallowEqual(prev.players, incoming.players);
+            const rangeEqual = shallowEqual(prev.number_range, incoming.number_range);
+            const roundEqual = prev.current_round === incoming.current_round;
+            const currentPlayerEqual = prev.current_player === incoming.current_player;
+            const directionEqual = prev.direction === incoming.direction;
+            const gameOverEqual = prev.game_over === incoming.game_over;
+
+            if (calledEqual && playersEqual && rangeEqual && roundEqual && currentPlayerEqual && directionEqual && gameOverEqual) {
+              // No effective changes
+              return prev;
+            }
+
+            // Merge selectively to avoid wholesale replace where not needed
+            const merged: GameState = {
+              ...prev,
+              ...incoming,
+              // prefer arrays from incoming
+              called_numbers: incoming.called_numbers,
+              players: incoming.players,
+            };
+
+            // If incoming indicates game over, navigate after state update
+            if (incoming.game_over) {
+              setTimeout(() => {
+                navigate("/result", { state: { gameState: merged, roomId } });
+              }, 800);
+            }
+
+            return merged;
+          });
+
+        } else if (data.type === "game_started") {
+          if (data.game_id) {
+            const s = await gameApi.getGameStatus(data.game_id);
+            setGameState(s as GameState);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to handle WS message in GameBoard:", e);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      webSocketService.disconnect();
+    };
+  }, [roomId]);
 
   if (!gameState) return null;
 

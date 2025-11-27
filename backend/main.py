@@ -529,7 +529,23 @@ async def notify_lobby_update():
     await manager.broadcast_lobby({"type": "refresh"})
 
 async def notify_room_update(room_id: int, room: Room):
-    await manager.broadcast_room(room_id, {"type": "room_update", "room": room.to_dict()})
+    # If the room has an active game, include game state in the broadcast so
+    # in-game clients can sync without extra polling.
+    payload = {"type": "room_update", "room": room.to_dict()}
+    if room.game_id and room.game_id in games:
+        game = games.get(room.game_id)
+        payload["game"] = {
+            "game_id": game.game_id,
+            "current_round": game.current_round,
+            "current_player": game.players[game.current_player_index].id,
+            "number_range": game.number_range,
+            "called_numbers": list(game.called_numbers),
+            "players": [p.dict() for p in game.players],
+            "direction": game.direction,
+            "game_over": len([p for p in game.players if p.is_alive]) <= 1,
+        }
+
+    await manager.broadcast_room(room_id, payload)
     await notify_lobby_update() # Lobby also needs to know status changed
 
 # ===== Background Tasks =====
@@ -792,6 +808,15 @@ async def call_numbers(request: CallNumbersRequest):
     
     if hit_secret:
         game_over = game.eliminate_current_player()
+        # Broadcast updated room/game state to connected clients
+        try:
+            for rid, r in rooms.items():
+                if r.game_id == game.game_id:
+                    await notify_room_update(rid, r)
+                    break
+        except Exception as e:
+            print(f"Error broadcasting room update after hit: {e}")
+
         return {
             "success": True,
             "hit_secret": True,
@@ -805,6 +830,15 @@ async def call_numbers(request: CallNumbersRequest):
     else:
         game.next_player()
         print(f"Next Player: {game.players[game.current_player_index].id}")
+        # Broadcast updated room/game state to connected clients
+        try:
+            for rid, r in rooms.items():
+                if r.game_id == game.game_id:
+                    await notify_room_update(rid, r)
+                    break
+        except Exception as e:
+            print(f"Error broadcasting room update after next_player: {e}")
+
         return {
             "success": True,
             "hit_secret": False,
@@ -831,7 +865,15 @@ async def use_pass(request: UsePassRequest):
     player.pass_available = False
     game._save_action(request.player_id, 'pass')
     game.next_player()
-    
+    # Broadcast updated room/game state to connected clients
+    try:
+        for rid, r in rooms.items():
+            if r.game_id == game.game_id:
+                await notify_room_update(rid, r)
+                break
+    except Exception as e:
+        print(f"Error broadcasting room update after pass: {e}")
+
     return {
         "success": True,
         "next_player": game.players[game.current_player_index].id
@@ -856,7 +898,15 @@ async def use_reverse(request: UseReverseRequest):
     game.direction *= -1
     game._save_action(request.player_id, 'reverse')
     game.next_player()
-    
+    # Broadcast updated room/game state to connected clients
+    try:
+        for rid, r in rooms.items():
+            if r.game_id == game.game_id:
+                await notify_room_update(rid, r)
+                break
+    except Exception as e:
+        print(f"Error broadcasting room update after reverse: {e}")
+
     return {
         "success": True,
         "new_direction": game.direction,
