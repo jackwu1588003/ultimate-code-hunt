@@ -311,7 +311,7 @@ const RoomWaiting = () => {
                                 )}
                             </div>
 
-                            {isHost && (
+                            {/* {isHost && (
                                 <div className="flex items-center justify-center gap-4 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
                                     <span className="text-sm font-medium">人數上限: {room.max_players}</span>
                                     <div className="flex gap-2">
@@ -333,7 +333,7 @@ const RoomWaiting = () => {
                                         </Button>
                                     </div>
                                 </div>
-                            )}
+                            )} */}
 
                             <div className="flex justify-center">
                                 <Button variant="ghost" onClick={handleLeave} className="text-red-500 hover:text-red-700 hover:bg-red-50">
