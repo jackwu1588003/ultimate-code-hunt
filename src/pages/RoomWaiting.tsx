@@ -224,13 +224,26 @@ const RoomWaiting = () => {
                     <div className="space-y-4">
                         {/* Player List */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {room.players.map((player: any) => (
+                            {room.players.map((player: any, idx: number) => (
                                 <div key={player.id} className="flex items-center p-3 bg-gray-100 rounded-lg shadow-sm">
-                                    <Avatar className="h-10 w-10 mr-3">
-                                        <AvatarFallback className={player.is_ai ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"}>
-                                            {player.is_ai ? <Bot size={20} /> : <User size={20} />}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                    {/* choose avatar filename from a small pool deterministically */}
+                                    {(() => {
+                                        const AVATAR_POOL = [
+                                            '118725_0.jpg','119365_0.jpg','121298_0.jpg','121299_0.jpg','121300_0.jpg',
+                                            '121301_0.jpg','121302_0.jpg','121303_0.jpg','121304_0.jpg','121307_0.jpg'
+                                        ];
+                                        const idNum = typeof player.id === 'number' ? Math.abs(player.id) : idx;
+                                        const avatarFilename = AVATAR_POOL[idNum % AVATAR_POOL.length];
+
+                                        return (
+                                            <Avatar className="h-10 w-10 mr-3">
+                                                <AvatarImage avatarFilename={avatarFilename} requestedSize={40} alt={player.name} />
+                                                <AvatarFallback className={player.is_ai ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600"}>
+                                                    {player.is_ai ? <Bot size={20} /> : <User size={20} />}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                        );
+                                    })()}
                                     <div className="flex-1">
                                         <div className="font-semibold">{player.name}</div>
                                         <div className="text-xs text-gray-500">{player.is_ai ? "AI Player" : "Human"}</div>

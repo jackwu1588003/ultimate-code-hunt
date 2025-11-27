@@ -2,6 +2,7 @@ import { Player } from "@/types/game";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RotateCcw, CircleSlash, User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 interface PlayerCardProps {
@@ -31,14 +32,23 @@ export const PlayerCard = ({ player, isActive, isLarge = false, status }: Player
 
       {/* Player Avatar */}
       <div className="flex items-center gap-3 mb-3">
-        <div
-          className={cn(
-            "rounded-full bg-primary/20 flex items-center justify-center",
-            isLarge ? "w-16 h-16" : "w-12 h-12"
-          )}
-        >
-          <User className={cn(isLarge ? "w-8 h-8" : "w-6 h-6", "text-primary")} />
-        </div>
+        {(() => {
+          const AVATAR_POOL = [
+            '118725_0.jpg','119365_0.jpg','121298_0.jpg','121299_0.jpg','121300_0.jpg',
+            '121301_0.jpg','121302_0.jpg','121303_0.jpg','121304_0.jpg','121307_0.jpg'
+          ];
+          const idNum = typeof player.id === 'number' ? Math.abs(player.id) : 0;
+          const avatarFilename = AVATAR_POOL[idNum % AVATAR_POOL.length];
+
+          return (
+            <Avatar className={cn("rounded-full overflow-hidden", isLarge ? "w-16 h-16" : "w-12 h-12")}>
+              <AvatarImage avatarFilename={avatarFilename} requestedSize={isLarge ? 64 : 40} alt={player.name} />
+              <AvatarFallback className={cn(player.is_ai ? "bg-purple-100 text-purple-600" : "bg-blue-100 text-blue-600")}>
+                <User className={cn(isLarge ? "w-8 h-8" : "w-6 h-6", "text-primary")} />
+              </AvatarFallback>
+            </Avatar>
+          );
+        })()}
         <div>
           <h3 className={cn("font-bold", isLarge ? "text-2xl" : "text-lg")}>
             {player.name}

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Play, Users, Search, Plus } from "lucide-react";
+import { Play, Users, Search, Plus, Dices } from "lucide-react";
 import { gameApi } from "@/services/gameApi";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -17,6 +17,12 @@ const GameStart = () => {
   const [maxPlayers, setMaxPlayers] = useState(5);
   const [roomPassword, setRoomPassword] = useState("");
   const [creatorName, setCreatorName] = useState("");
+
+  const generateRandomName = () => {
+    const adjectives = ["快樂的", "勇敢的", "神秘的", "幸運的", "瘋狂的", "超級", "無敵", "閃亮", "傳奇", "終極"];
+    const nouns = ["玩家", "戰士", "法師", "獵人", "忍者", "騎士", "冒險者", "大師", "專家", "新手"];
+    return `${adjectives[Math.floor(Math.random() * adjectives.length)]}${nouns[Math.floor(Math.random() * nouns.length)]}`;
+  };
 
   const handleCreateRoom = async () => {
     if (!creatorName.trim()) {
@@ -67,11 +73,21 @@ const GameStart = () => {
 
             <div className="space-y-2">
               <Label>您的暱稱</Label>
-              <Input
-                placeholder="輸入您的暱稱..."
-                value={creatorName}
-                onChange={(e) => setCreatorName(e.target.value)}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="輸入您的暱稱..."
+                  value={creatorName}
+                  onChange={(e) => setCreatorName(e.target.value)}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="隨機名稱"
+                  onClick={() => setCreatorName(generateRandomName())}
+                >
+                  <Dices className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">
