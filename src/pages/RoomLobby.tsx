@@ -140,7 +140,7 @@ const RoomLobby = () => {
                             />
                         </div>
 
-                        {selectedRoom?.has_password && (
+                        {/* {selectedRoom?.has_password && (
                             <div className="space-y-2">
                                 <Label>房間密碼</Label>
                                 <Input
@@ -150,7 +150,7 @@ const RoomLobby = () => {
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
                             </div>
-                        )}
+                        )} */}
                     </div>
                     <DialogFooter>
                         <div className="w-full flex flex-col sm:flex-row gap-2">

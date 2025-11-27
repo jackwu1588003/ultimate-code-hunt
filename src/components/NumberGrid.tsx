@@ -25,7 +25,7 @@ export const NumberGrid = ({
   const isNumberSelected = (num: number) => selectedNumbers.includes(num);
 
   return (
-    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 p-4">
+    <div className="grid grid-cols-6 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3 p-3">
       {numbers.map((num) => {
         const isCalled = isNumberCalled(num);
         const isSelected = isNumberSelected(num);
@@ -35,14 +35,18 @@ export const NumberGrid = ({
           <Button
             key={num}
             variant={isSelected ? "default" : isCalled ? "secondary" : "outline"}
-            size="lg"
+            // Use icon size as a base to avoid large horizontal padding from `lg`
+            size="icon"
             disabled={isDisabled}
             onClick={() => onNumberSelect(num)}
             className={cn(
-              "aspect-square text-lg font-bold transition-all duration-200",
+              // Fixed square sizes per breakpoint to avoid oversized frames on mobile
+              "h-12 w-12 text-sm sm:h-14 sm:w-14 sm:text-base font-bold rounded-xl transition-all duration-200 transform",
+              // Selected / called / default visual tweaks for better mobile appearance
               isSelected && "bg-warning hover:bg-warning/90 animate-bounce-in ring-2 ring-warning",
-              isCalled && "cursor-not-allowed opacity-50",
-              !isCalled && !isSelected && "hover:scale-110"
+              isCalled && "cursor-not-allowed opacity-50 bg-muted/10",
+              !isCalled && !isSelected && "bg-white/60 dark:bg-gray-800/60 hover:scale-105",
+              "border border-white/10"
             )}
           >
             {num}

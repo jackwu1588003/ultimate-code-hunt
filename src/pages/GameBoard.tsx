@@ -435,7 +435,7 @@ const GameBoard = () => {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             <NumberGrid
               range={gameState.number_range}
               calledNumbers={gameState.called_numbers}

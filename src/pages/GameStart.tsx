@@ -144,7 +144,7 @@ const GameStart = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label>房間密碼 (選填)</Label>
               <Input
                 type="password"
@@ -152,7 +152,7 @@ const GameStart = () => {
                 value={roomPassword}
                 onChange={(e) => setRoomPassword(e.target.value)}
               />
-            </div>
+            </div> */}
 
             <Button
               size="lg"
