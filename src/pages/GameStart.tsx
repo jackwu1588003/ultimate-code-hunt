@@ -213,7 +213,7 @@ const GameStart = () => {
           </div>
 
           {/* Browse Rooms */}
-          <Button
+          {/* <Button
             variant="outline"
             size="lg"
             className="w-full text-lg py-6"
@@ -221,7 +221,7 @@ const GameStart = () => {
           >
             <Search className="w-5 h-5 mr-2" />
             瀏覽所有房間
-          </Button>
+          </Button> */}
 
           <div className="pt-4 text-center">
             <Button

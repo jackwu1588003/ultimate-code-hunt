@@ -31,8 +31,6 @@ const GameBoard = () => {
   const [isExploding, setIsExploding] = useState(false);
   const [recentCall, setRecentCall] = useState<{ playerId: number; numbers: number[] } | null>(null);
 
-  const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     const initializeGame = async () => {
       console.log("GameBoard: initializeGame started", { gameState, roomId });
@@ -56,7 +54,8 @@ const GameBoard = () => {
           }
         } catch (error) {
           console.error("Failed to recover game state:", error);
-          setError("找不到房間或遊戲已結束");
+          // Don't redirect immediately on error, let the user see the error or retry
+          // navigate("/");
         }
       } else if (!gameState && !roomId) {
         console.log("GameBoard: No gameState and no roomId, redirecting home");
@@ -66,24 +65,6 @@ const GameBoard = () => {
 
     initializeGame();
   }, [gameState, roomId, navigate]);
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-game-gradient flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-destructive text-center text-2xl">錯誤</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center gap-6">
-            <p className="text-lg text-center text-muted-foreground">{error}</p>
-            <Button onClick={() => navigate("/")} size="lg" className="w-full">
-              返回首頁
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (!gameState) {
     return (
@@ -250,12 +231,6 @@ const GameBoard = () => {
 
   const currentPlayer = gameState.players.find((p) => p.id === gameState.current_player);
   const alivePlayers = gameState.players.filter((p) => p.is_alive);
-
-  console.log("GameBoard Render:", {
-    gameState,
-    calledNumbers: gameState.called_numbers,
-    range: gameState.number_range
-  });
 
   // Get local player ID
   const localPlayerId = parseInt(localStorage.getItem(`player_id_${roomId}`) || "0");
@@ -495,22 +470,16 @@ const GameBoard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            {gameState.number_range && gameState.number_range.length === 2 ? (
-              <NumberGrid
-                range={gameState.number_range}
-                calledNumbers={gameState.called_numbers || []}
-                selectedNumbers={selectedNumbers}
-                onNumberSelect={handleNumberSelect}
-                disabled={isProcessing || currentPlayer?.is_ai || !isMyTurn}
-                isNumberDisabled={isNumberDisabled}
-                recentCallNumbers={recentCall?.numbers}
-                recentCallPlayerId={recentCall?.playerId}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                正在載入號碼盤...
-              </div>
-            )}
+            <NumberGrid
+              range={gameState.number_range}
+              calledNumbers={gameState.called_numbers}
+              selectedNumbers={selectedNumbers}
+              onNumberSelect={handleNumberSelect}
+              disabled={isProcessing || currentPlayer?.is_ai || !isMyTurn}
+              isNumberDisabled={isNumberDisabled}
+              recentCallNumbers={recentCall?.numbers}
+              recentCallPlayerId={recentCall?.playerId}
+            />
           </CardContent>
         </Card>
 
