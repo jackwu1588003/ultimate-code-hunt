@@ -18,6 +18,15 @@ export interface GameState {
   game_over: boolean;
   winner?: number;
   hints?: string[]; // 遊戲提示
+  action_history?: GameAction[]; // 行動記錄
+}
+
+export interface GameAction {
+  player_id: number;
+  action_type: "call" | "pass" | "reverse";
+  numbers?: number[];
+  hit_secret?: boolean;
+  timestamp?: string;
 }
 
 export interface PlayerConfig {

@@ -471,14 +471,37 @@ const GameBoard = () => {
           </CardHeader>
           <CardContent className="p-4">
             <NumberGrid
-              range={gameState.number_range}
+              range={(() => {
+                // Return the FULL range for the current round so all numbers are visible
+                if (gameState.current_round === 1) return [1, 30];
+                if (gameState.current_round === 2) return [1, 20];
+                return [1, 15];
+              })()}
               calledNumbers={gameState.called_numbers}
               selectedNumbers={selectedNumbers}
               onNumberSelect={handleNumberSelect}
               disabled={isProcessing || currentPlayer?.is_ai || !isMyTurn}
-              isNumberDisabled={isNumberDisabled}
+              isNumberDisabled={(num) => {
+                // Disable numbers outside the CURRENT valid range
+                if (num < gameState.number_range[0] || num > gameState.number_range[1]) return true;
+                return isNumberDisabled(num);
+              }}
               recentCallNumbers={recentCall?.numbers}
               recentCallPlayerId={recentCall?.playerId}
+              numberOwners={(() => {
+                const owners: Record<number, number> = {};
+                if (gameState.action_history) {
+                  gameState.action_history.forEach(action => {
+                    if (action.action_type === 'call' && action.numbers) {
+                      action.numbers.forEach(num => {
+                        owners[num] = action.player_id;
+                      });
+                    }
+                  });
+                }
+                return owners;
+              })()}
+              players={gameState.players}
             />
           </CardContent>
         </Card>

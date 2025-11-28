@@ -637,6 +637,7 @@ async def notify_room_update(room_id: int, room: Room):
             "direction": game.direction,
             "game_over": len([p for p in game.players if p.is_alive]) <= 1,
             "hints": game.hints,  # 添加提示
+            "action_history": game.action_history, # 添加行動記錄
         }
 
         # include last action (if any) so clients can show transient highlights
