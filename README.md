@@ -1,26 +1,20 @@
-# Welcome to your Lovable project
+# Welcome
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/702c95c5-6488-4362-a905-576f0cd59448
+This repository contains the source code for the Ultimate Code Hunt web app (Vite + React + TypeScript).
 
 ## How can I edit this code?
 
 There are several ways of editing your application.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/702c95c5-6488-4362-a905-576f0cd59448) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
 **Use your preferred IDE**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+If you want to work locally using your own IDE, you can clone this repo and push changes.
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Follow these steps:
+Follow these steps to run locally:
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
@@ -30,9 +24,9 @@ git clone <YOUR_GIT_URL>
 cd <YOUR_PROJECT_NAME>
 
 # Step 3: Install the necessary dependencies.
-npm i
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Start the development server with auto-reloading.
 npm run dev
 ```
 
@@ -44,11 +38,8 @@ npm run dev
 
 **Use GitHub Codespaces**
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- Click on the "Code" button (green button) near the top right of the repo page.
+- Select the "Codespaces" tab and create a new codespace to edit files directly in the cloud.
 
 ## What technologies are used for this project?
 
@@ -62,12 +53,13 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/702c95c5-6488-4362-a905-576f0cd59448) and click on Share -> Publish.
+Build a production bundle and deploy the generated static files to your preferred static host (Netlify, Vercel, Surge, or your own server):
 
-## Can I connect a custom domain to my Lovable project?
+```sh
+npm run build
+# then deploy the contents of the `dist` or `build` folder according to your host's instructions
+```
 
-Yes, you can!
+## Can I connect a custom domain?
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Yes. Follow your host/provider's instructions for adding or pointing a custom domain to your deployment.

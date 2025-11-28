@@ -190,13 +190,13 @@ class Room:
             self.status = RoomStatus.FULL
             
     def remove_player(self, player_id: int):
-        self.players = [p for p in self.players if p.id != player_id]
-        if self.status == RoomStatus.FULL and len(self.players) < self.max_players:
-            self.status = RoomStatus.WAITING
-        
-        # If host leaves, assign new host if players remain
-        if self.host_id == player_id and self.players:
-            self.host_id = self.players[0].id
+        # If host leaves, disband room (remove all players)
+        if self.host_id == player_id:
+            self.players = []
+        else:
+            self.players = [p for p in self.players if p.id != player_id]
+            if self.status == RoomStatus.FULL and len(self.players) < self.max_players:
+                self.status = RoomStatus.WAITING
 
     def to_dict(self):
         return {
@@ -428,11 +428,11 @@ class GameState:
             elif num % (player_count - 1) == 0 and player_count > 2:
                 all_hints.append(f"玩家人數-1的倍數({player_count - 1}的倍數)")
         
-        # 隨機選擇最多2個提示
-        if len(all_hints) > 2:
-            selected_hints = random.sample(all_hints, 2)
+        # 隨機選擇1個提示
+        if len(all_hints) > 0:
+            selected_hints = random.sample(all_hints, 1)
         else:
-            selected_hints = all_hints
+            selected_hints = []
         
         return selected_hints
     
@@ -818,6 +818,8 @@ async def leave_room_action(room_id: int, request: LeaveRoomRequest):
     
     # Check if room is empty
     if len(room.players) == 0:
+        # Broadcast update so everyone knows they are removed
+        await notify_room_update(room_id, room)
         del rooms[room_id]
         await notify_lobby_update()
         return {"success": True, "message": "Room deleted"}

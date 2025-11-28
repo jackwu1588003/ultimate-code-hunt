@@ -128,7 +128,7 @@ const RoomWaiting = () => {
                 const gameState = await gameApi.getGameStatus(data.game_id);
                 navigate(`/game/${roomId}`, { state: { gameState, roomId } });
             }
-        });
+        }, `room_${roomId}`);
 
         return () => {
             unsubscribe();
@@ -246,8 +246,8 @@ const RoomWaiting = () => {
                                     {/* choose avatar filename from a small pool deterministically */}
                                     {(() => {
                                         const AVATAR_POOL = [
-                                            '118725_0.jpg','119365_0.jpg','121298_0.jpg','121299_0.jpg','121300_0.jpg',
-                                            '121301_0.jpg','121302_0.jpg','121303_0.jpg','121304_0.jpg','121307_0.jpg'
+                                            '118725_0.jpg', '119365_0.jpg', '121298_0.jpg', '121299_0.jpg', '121300_0.jpg',
+                                            '121301_0.jpg', '121302_0.jpg', '121303_0.jpg', '121304_0.jpg', '121307_0.jpg'
                                         ];
                                         const idNum = typeof player.id === 'number' ? Math.abs(player.id) : idx;
                                         const avatarFilename = AVATAR_POOL[idNum % AVATAR_POOL.length];
@@ -324,14 +324,16 @@ const RoomWaiting = () => {
                     ) : (
                         <div className="flex flex-col gap-4 pt-4 border-t">
                             <div className="flex justify-center gap-4">
-                                <Button
-                                    size="lg"
-                                    className="w-full md:w-auto bg-green-600 hover:bg-green-700"
-                                    onClick={handleStartGame}
-                                    disabled={room.player_count < 2}
-                                >
-                                    <Play className="mr-2 h-5 w-5" /> 開始遊戲
-                                </Button>
+                                {isHost && (
+                                    <Button
+                                        size="lg"
+                                        className="w-full md:w-auto bg-green-600 hover:bg-green-700"
+                                        onClick={handleStartGame}
+                                        disabled={room.player_count < 2}
+                                    >
+                                        <Play className="mr-2 h-5 w-5" /> 開始遊戲
+                                    </Button>
+                                )}
 
                                 {isHost && room.player_count < room.max_players && (
                                     <Button variant="secondary" onClick={handleAddAI}>

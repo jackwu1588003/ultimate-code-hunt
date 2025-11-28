@@ -61,24 +61,14 @@ class WebSocketService {
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                // Debounce/merge rapid messages: keep latest and dispatch after short delay
-                entry.lastMessage = data;
-                if (entry.debounceTimer) {
-                    window.clearTimeout(entry.debounceTimer);
-                }
-                const debounceMs = (entry as any).debounceMs ?? 120;
-                entry.debounceTimer = window.setTimeout(() => {
-                    const msg = entry.lastMessage;
-                    entry.lastMessage = null;
-                    entry.debounceTimer = null;
-                    entry.handlers.slice().forEach((h) => {
-                        try {
-                            h(msg);
-                        } catch (e) {
-                            console.error("WebSocket handler error", e);
-                        }
-                    });
-                }, 120); // 120ms debounce to reduce UI thrash on mobile
+                // Dispatch immediately without debounce
+                entry.handlers.slice().forEach((h) => {
+                    try {
+                        h(data);
+                    } catch (e) {
+                        console.error("WebSocket handler error", e);
+                    }
+                });
             } catch (e) {
                 console.error("Failed to parse WebSocket message", e);
             }
@@ -124,7 +114,7 @@ class WebSocketService {
             Object.keys(this.connections).forEach((k) => {
                 const e = this.connections[k];
                 e.shouldReconnect = false;
-                try { e.ws.close(); } catch (err) {}
+                try { e.ws.close(); } catch (err) { }
                 delete this.connections[k];
             });
         }
@@ -146,14 +136,14 @@ class WebSocketService {
                 entry = this.connections[keys[0]];
             } else if (keys.length === 0) {
                 console.warn("No active WebSocket connection to subscribe to (no clientType provided)");
-                return () => {};
+                return () => { };
             } else {
                 console.warn("Multiple WebSocket connections active; please provide clientType to subscribe");
-                return () => {};
+                return () => { };
             }
         }
 
-        if (!entry) return () => {};
+        if (!entry) return () => { };
 
         entry.handlers.push(handler);
 
