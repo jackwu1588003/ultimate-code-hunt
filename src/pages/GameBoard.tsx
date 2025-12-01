@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // 顯示爆炸動畫的持續時間（毫秒）
-const EXPLOSION_DURATION_MS = 10000;
+const EXPLOSION_DURATION_MS = 50000;
 
 const GameBoard = () => {
   const location = useLocation();
