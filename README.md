@@ -1,65 +1,98 @@
-# Welcome
+# Ultimate Code Hunt
 
-## Project info
+A full-stack web application combining a React frontend and a FastAPI backend.
 
-This repository contains the source code for the Ultimate Code Hunt web app (Vite + React + TypeScript).
+## 🛠 Technical Stack
 
-## How can I edit this code?
+This project uses a modern architecture with separate frontend and backend:
 
-There are several ways of editing your application.
+### Frontend
+- **Core**: [React](https://react.dev/) (v18), [TypeScript](https://www.typescriptlang.org/)
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) (based on Radix UI)
+- **State Management & Data Fetching**: [TanStack Query (React Query)](https://tanstack.com/query/latest)
+- **Routing**: [React Router](https://reactrouter.com/)
+- **Forms**: [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **HTTP Client**: [Axios](https://axios-http.com/)
 
-**Use your preferred IDE**
+### Backend
+- **Framework**: [FastAPI](https://fastapi.tiangolo.com/)
+- **Runtime**: Python 3.11+
+- **Server**: Uvicorn
+- **Database**: SQLite (`game_records.db`)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes.
+## 📂 Project Structure
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```text
+.
+├── backend/                # Python FastAPI Backend
+│   ├── main.py            # Backend entry point
+│   ├── game_records.db    # SQLite database
+│   └── requirements.txt   # Python dependencies
+├── public/                 # Static assets (images, favicon, etc.)
+├── scripts/                # Utility scripts
+├── src/                    # Frontend source code
+│   ├── components/        # Reusable UI components
+│   │   └── ui/            # shadcn/ui base components
+│   ├── hooks/             # Custom React Hooks
+│   ├── lib/               # Utility functions
+│   ├── pages/             # Page components (Route handlers)
+│   ├── services/          # API and WebSocket services
+│   ├── types/             # TypeScript type definitions
+│   ├── App.tsx            # Main application component
+│   └── main.tsx           # Frontend entry point
+├── components.json         # shadcn/ui configuration
+├── index.html             # HTML entry point
+├── package.json           # Node.js project configuration and dependencies
+├── tailwind.config.ts     # Tailwind CSS configuration
+├── tsconfig.json          # TypeScript configuration
+└── vite.config.ts         # Vite configuration
+```
 
-Follow these steps to run locally:
+## 🚀 Getting Started
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Prerequisites
+- Node.js (v18+ recommended)
+- Python (v3.11+ recommended)
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 1. Install and Run Backend
 
-# Step 3: Install the necessary dependencies.
+```bash
+cd backend
+# Create a virtual environment (Optional but recommended)
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the server
+uvicorn main:app --reload
+```
+The backend will start at `http://localhost:8000` by default.
+
+### 2. Install and Run Frontend
+
+Open a new terminal window:
+
+```bash
+# Return to the project root
 npm install
 
-# Step 4: Start the development server with auto-reloading.
+# Start the development server
 npm run dev
 ```
+The frontend will start at `http://localhost:5173` by default.
 
-**Edit a file directly in GitHub**
+## 📦 Deployment
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Click on the "Code" button (green button) near the top right of the repo page.
-- Select the "Codespaces" tab and create a new codespace to edit files directly in the cloud.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Build a production bundle and deploy the generated static files to your preferred static host (Netlify, Vercel, Surge, or your own server):
-
-```sh
+### Build Frontend
+```bash
 npm run build
-# then deploy the contents of the `dist` or `build` folder according to your host's instructions
 ```
+The built files will be in the `dist` directory, ready to be deployed to any static hosting service (e.g., Vercel, Netlify).
 
-## Can I connect a custom domain?
-
-Yes. Follow your host/provider's instructions for adding or pointing a custom domain to your deployment.
+### Deploy Backend
+The backend can be deployed to any platform that supports Python (e.g., Zeabur, Render, Railway). Please refer to `ZEABUR_DEPLOY.md` for more deployment details.
