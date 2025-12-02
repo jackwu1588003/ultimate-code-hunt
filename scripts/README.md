@@ -1,27 +1,27 @@
-生成頭像多解析度變體
+# Generate Multi-Resolution Avatar Variants
 
-目的
-- 為 `public/images` 中的頭像生成不同解析度（32、64、128、256），以便在不同螢幕尺寸或 UI 元件中使用 `srcset` 或依需求載入。
+## Purpose
+- Generate different resolutions (32, 64, 128, 256) for avatars in `public/images` to facilitate using `srcset` or loading specific sizes based on screen dimensions or UI component requirements.
 
-先決條件
+## Prerequisites
 - Python 3.8+
-- Pillow 套件
+- Pillow package
 
-安裝 Pillow
+## Install Pillow
 
 ```bash
 pip install Pillow
 ```
 
-執行
+## Execution
 
 ```bash
 python scripts/generate_avatar_variants.py
 ```
 
-輸出
-- 在 `public/images` 會生成新的檔案，例如 `121298_0_32.jpg`、`121298_0_64.jpg` 等。
-- 同目錄會生成 `avatars.json`，格式如下：
+## Output
+- New files will be generated in `public/images`, such as `121298_0_32.jpg`, `121298_0_64.jpg`, etc.
+- An `avatars.json` file will be generated in the same directory with the following format:
 
 ```json
 {
@@ -35,11 +35,11 @@ python scripts/generate_avatar_variants.py
 }
 ```
 
-整合到前端
-- 前端可讀取 `public/images/avatars.json`，然後以需要解析度載入對應檔案，或使用 `srcset` 屬性。範例：
+## Frontend Integration
+- The frontend can read `public/images/avatars.json` and then load the corresponding file based on the required resolution, or use the `srcset` attribute. Example:
 
 ```tsx
-// 假設 avatarVariants = avatarsJson["121298_0.jpg"]
+// Assuming avatarVariants = avatarsJson["121298_0.jpg"]
 <img
   src={`/images/${avatarVariants['128']}`}
   srcSet={`/images/${avatarVariants['32']} 32w, /images/${avatarVariants['64']} 64w, /images/${avatarVariants['128']} 128w, /images/${avatarVariants['256']} 256w`}
@@ -48,4 +48,4 @@ python scripts/generate_avatar_variants.py
 />
 ```
 
-如需我直接整合前端的 `Avatar` component 使用 `avatars.json`，請告訴我你想要的行為（例如：自動依元件尺寸選最佳檔案，或暴露 `size` prop）。
+If you need me to directly integrate `avatars.json` into the frontend `Avatar` component, please let me know your desired behavior (e.g., automatically select the best file based on component size, or expose a `size` prop).
